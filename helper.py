@@ -3,20 +3,20 @@ import random
 import pygame
 
 BOUNDARY_MARGIN = 200
+G = 0.1
+SOFTENING = 200
 
 class Helper:
 
     @staticmethod
     def get_accelerations(positions, masses):
         accels = [[0,0] for _ in range(len(positions))]
-        G = 0.1
-        softening = 200
 
         for i in range(len(positions)):
             for j in range(i + 1, len(positions)):
                 dx = positions[j][0] - positions[i][0]
                 dy = positions[j][1] - positions[i][1]
-                dist_sq = dx**2 + dy**2 + softening
+                dist_sq = dx**2 + dy**2 + SOFTENING
                 dist = math.sqrt(dist_sq)
 
                 if dist == 0:
@@ -46,6 +46,7 @@ class Helper:
         force_y = force_magnitude * (distance_y / distance)
         return (force_x, force_y)
 
+    @staticmethod
     def set_estimated_initial_velocity(planet, central_body, G = 0.1):
         dx = planet.position[0] - central_body.position[0]
         dy = planet.position[1] - central_body.position[1]
@@ -54,13 +55,14 @@ class Helper:
         if distance == 0:
             return
 
-        orbital_velocity = math.sqrt(G * central_body.mass / distance) * 0.95
+        orbital_velocity = morbital_velocity = math.sqrt(G * central_body.mass * distance**2 / (distance**2 + SOFTENING)**1.5)
         velocity_x = -orbital_velocity * (dy / distance)
         velocity_y = orbital_velocity * (dx / distance)
         velocity_x += (random.random() - 0.5) * 0.01
         velocity_y += (random.random() - 0.5) * 0.02
         planet.velocity = [velocity_x, velocity_y]
 
+    @staticmethod
     def set_perfect_initial_velocity(planet, central_body, G=0.1):
         dx = planet.position[0] - central_body.position[0]
         dy = planet.position[1] - central_body.position[1]
@@ -76,6 +78,7 @@ class Helper:
              orbital_velocity * (dx / distance) + central_body.velocity[1]
         ]
 
+    @staticmethod
     def check_boundary(body, sun, width, height):
         dx = body.position[0] - sun.position[0]
         dy = body.position[1] - sun.position[1]
@@ -83,18 +86,19 @@ class Helper:
 
         MAX_DISTANCE = max(width, height) * 50
         return distance > MAX_DISTANCE
+
+    _glow_cache = {}
     
+    @staticmethod
     def create_glow_surface(radius, color, intensity = 100):
-        glow_surface = pygame.Surface((radius * 4, radius * 4), pygame.SRCALPHA)
-        glow_center = radius * 2
-        for i in range(int(radius * 1.5), 0, -1):
-            alpha = max(0, min(255, int(intensity * ((1 - (i - radius) / (radius * 1.5)) ** 4))))
-            r = max(0, min(255, int(color[0])))
-            g = max(0, min(255, int(color[1])))
-            b = max(0, min(255, int(color[2])))
-            pygame.draw.circle(glow_surface, (r, g, b, alpha), (glow_center, glow_center), i)
-        return glow_surface
+        key = (radius, color, intensity)
+        if key not in Helper._glow_cache:
+            if len(Helper._glow_cache) > 64:
+                Helper._glow_cache.clear()
+            Helper._glow_cache[key] = Helper._build_glow_surface(radius, color, intensity)
+        return Helper._glow_cache[key]
     
+    @staticmethod
     def check_collision(body1, body2):
         dx = body2.position[0] - body1.position[0]
         dy = body2.position[1] - body1.position[1]
@@ -102,6 +106,7 @@ class Helper:
 
         return distance < (body1.radius + body2.radius)
 
+    @staticmethod
     def resolve_elastic_collision(body1, body2):
         dx = body2.position[0] - body1.position[0]
         dy = body2.position[1] - body1.position[1]
@@ -133,50 +138,64 @@ class Helper:
         body2.velocity[0] += impulse_x / body2.mass
         body2.velocity[1] += impulse_y / body2.mass
 
+    @staticmethod
     def resolve_inelastic_collision(body1, body2, bodies):
-        total_mass = (body1.mass + body2.mass) 
+        from specialized_bodies import BlackHole, Star, Planet
+
+        total_mass = body1.mass + body2.mass
         if total_mass == 0:
             return bodies
 
-        new_velocity_x = (body1.velocity[0] * body1.mass + body2.velocity[0] * body2.mass) / total_mass
-        new_velocity_y = (body1.velocity[1] * body1.mass + body2.velocity[1] * body2.mass) / total_mass
-
-        dx = body2.position[0] - body1.position[0]
-        dy = body2.position[1] - body1.position[1]
-        new_position_x = body1.position[0] + dx/2
-        new_position_y = body1.position[1] + dy/2
+        vx = (body1.velocity[0] * body1.mass + body2.velocity[0] * body2.mass) / total_mass
+        vy = (body1.velocity[1] * body1.mass + body2.velocity[1] * body2.mass) / total_mass
+        px = (body1.position[0]*body1.mass + body2.position[0]*body2.mass) / total_mass
+        py = (body1.position[1]*body1.mass + body2.position[1]*body2.mass) / total_mass
 
         new_radius = int(math.sqrt(body1.radius**2 + body2.radius**2))
-        
-        new_color = (
-            (body1.color[0] * body1.mass + body2.color[0] * body2.mass) // total_mass,
-            (body1.color[1] * body1.mass + body2.color[1] * body2.mass) // total_mass,
-            (body1.color[2] * body1.mass + body2.color[2] * body2.mass) // total_mass
-        )
+        new_color = tuple(int((c1*body1.mass + c2*body2.mass) / total_mass) for c1, c2 in zip(body1.color, body2.color))
 
-        from specialized_bodies import Star, Planet, BlackHole
+        pos = [px, py]
 
-        if (isinstance(body1, Star) and isinstance(body2, Star)) or (isinstance(body1, Star) and not isinstance(body2, Star)) or (not isinstance(body1, Star) and isinstance(body2, Star)):
-            star = body1 if isinstance(body1, Star) else body2
-            other = body2 if isinstance(body1, Star) else body1
-
-            new_body = Star(star.name, total_mass, new_radius, star.color, star.position[:])
+        if isinstance(body1, BlackHole) or isinstance(body2, BlackHole):
+            new_body = BlackHole(f"{body1.name}-{body2.name}", total_mass, new_radius, new_color, pos)
+        elif isinstance(body1, Star) or isinstance(body2, Star):
+            stars = [b for b in (body1, body2) if isinstance(b, Star)]
+            star = max(stars, key=lambda s: s.mass)
+            new_body = Star(star.name, total_mass, new_radius, new_color, pos)
             new_body.age = star.age
             new_body.lifetime = star.lifetime 
-            new_body.velocity = [new_velocity_x, new_velocity_y]
-
-        if (isinstance(body1, BlackHole) or isinstance(body2, BlackHole)):
-            new_body = BlackHole(f"{body1.name}-{body2.name}", total_mass, new_radius, new_color, [new_position_x, new_position_y])
-            new_body.velocity = [new_velocity_x, new_velocity_y]
-
-
-        if isinstance(body1, Planet) and isinstance(body2, Planet):
-            new_body = Planet(f"{body1.name}-{body2.name}", total_mass, new_radius, new_color, [new_position_x, new_position_y])
-            new_body.velocity = [new_velocity_x, new_velocity_y]
+        else: 
+            new_body = Planet(f"{body1.name}-{body2.name}", total_mass, new_radius, new_color, pos)
+        
+        new_body.velocity = [vx, vy]
 
         if body1 in bodies: bodies.remove(body1)
         if body2 in bodies: bodies.remove(body2)
         bodies.append(new_body)
-        
         return bodies
+    
+    @staticmethod
+    def rk4_step(bodies, dt):
+        masses = [body.mass for body in bodies]
+        pos0 = [body.position[:] for body in bodies]
+        vel0 = [body.velocity[:] for body in bodies]
 
+        acc1 = Helper.get_accelerations(pos0, masses)
+
+        pos2 = [[p[0] + v[0]*dt/2, p[1] + v[1]*dt/2] for p, v in zip(pos0, vel0)]
+        vel2 = [[v[0] + a[0]*dt/2, v[1] + a[1]*dt/2] for v, a in zip(vel0, acc1)]
+        acc2 = Helper.get_accelerations(pos2, masses)
+
+        pos3 = [[p[0] + v[0]*dt/2, p[1] + v[1]*dt/2] for p, v in zip(pos0, vel2)]
+        vel3 = [[v[0] + a[0]*dt/2, v[1] + a[1]*dt/2] for v, a in zip(vel0, acc2)]
+        acc3 = Helper.get_accelerations(pos3, masses)
+
+        pos4 = [[p[0] + v[0]*dt, p[1] + v[1]*dt] for p, v in zip(pos0, vel3)]
+        vel4 = [[v[0] + a[0]*dt, v[1] + a[1]*dt] for v, a in zip(vel0, acc3)]
+        acc4 = Helper.get_accelerations(pos4, masses)
+
+        for i, b in enumerate(bodies):
+            b.position[0] = pos0[i][0] + (dt/6) * (vel0[i][0] + 2*vel2[i][0] + 2*vel3[i][0] + vel4[i][0])
+            b.position[1] = pos0[i][1] + (dt/6) * (vel0[i][1] + 2*vel2[i][1] + 2*vel3[i][1] + vel4[i][1])
+            b.velocity[0] = vel0[i][0] + (dt/6) * (acc1[i][0] + 2*acc2[i][0] + 2*acc3[i][0] + acc4[i][0])
+            b.velocity[1] = vel0[i][1] + (dt/6) * (acc1[i][1] + 2*acc2[i][1] + 2*acc3[i][1] + acc4[i][1])

@@ -22,10 +22,20 @@ class CelestialBody:
         self.age += dt
 
     def draw(self, screen, zoom, offset_x, offset_y, WIDTH, HEIGHT):
-        # Basic position calculation for everything
+        # basic position calculation for everything
         screen_x = (self.position[0] - offset_x) * zoom + WIDTH // 2
         screen_y = (self.position[1] - offset_y) * zoom + HEIGHT // 2
         scaled_radius = max(1, int(self.radius * zoom))
         
         pygame.draw.circle(screen, self.color, (int(screen_x), int(screen_y)), scaled_radius)
         return screen_x, screen_y, scaled_radius
+
+    def draw_trail(self, screen, zoom, offset_x, offset_y, WIDTH, HEIGHT, step=4, segs=4):
+        pts = [((p[0] - offset_x) * zoom + WIDTH // 2,
+                (p[1] - offset_y) * zoom + HEIGHT // 2) for p in self.trail[::step]]
+        n = len(pts)
+        for s in range(segs):
+            seg = pts[s * n // segs : (s + 1) * n // segs + 1]
+            if len(seg) > 1:
+                shade = int(255 * (s + 1) / segs)
+                pygame.draw.lines(screen, (shade, shade, shade), False, seg, 1)

@@ -3,6 +3,16 @@ import pygame
 import math
 from helper import Helper
 
+_shadow_cache = {}
+
+def _get_shadow(sr):
+    s = _shadow_cache.get(sr)
+    if s is None:
+        s = pygame.Surface((sr * 2, sr * 2), pygame.SRCALPHA)
+        pygame.draw.circle(s, (0, 0, 0, 180), (sr, sr), sr)
+        _shadow_cache[sr] = s
+    return s
+
 class Star(CelestialBody):
     def __init__(self, name, mass, radius, color, position):
         super().__init__(name, mass, radius, color, position, immovable=False)
@@ -52,11 +62,7 @@ class Planet(CelestialBody):
 
     def draw(self, screen, bodies, zoom, offset_x, offset_y, WIDTH, HEIGHT):
         # draw trail
-        for i, pos in enumerate(self.trail):
-            tx = (pos[0] - offset_x) * zoom + WIDTH // 2
-            ty = (pos[1] - offset_y) * zoom + HEIGHT // 2
-            alpha = int(255 * (i / len(self.trail)))
-            pygame.draw.circle(screen, (alpha, alpha, alpha), (int(tx), int(ty)), max(1, int(1 * zoom)))
+        self.draw_trail(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
 
         # draw planet
         sx, sy, sr = super().draw(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
@@ -79,9 +85,7 @@ class Planet(CelestialBody):
             sh_x = sx - (dx / dist) * (sr * 0.8)
             sh_y = sy - (dy / dist) * (sr * 0.8)
             
-            shadow_surf = pygame.Surface((sr * 2, sr * 2), pygame.SRCALPHA)
-            pygame.draw.circle(shadow_surf, (0, 0, 0, 180), (sr, sr), sr)
-            screen.blit(shadow_surf, (sh_x - sr, sh_y - sr))
+            screen.blit(_get_shadow(sr), (sh_x - sr, sh_y - sr))
 
 class BlackHole(CelestialBody):
     def __init__(self, name, mass, radius, color, position):

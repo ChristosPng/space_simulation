@@ -14,6 +14,8 @@ class Particle:
         self.life = 255
         self.decay = random.uniform(3, 7)
         self.size = random.randint(2, 4)
+        self.surf = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
+        pygame.draw.circle(self.surf, (*self.color, 255), (self.size, self.size), self.size)
 
     def update(self):
         self.x += self.vx
@@ -25,8 +27,7 @@ class Particle:
         screen_y = (self.y - camera_y) * zoom + HEIGHT // 2
 
         if self.life > 0:
-            alpha_color = (*self.color, max(0, int(self.life)))
-            surf = pygame.Surface((self.size*2, self.size*2), pygame.SRCALPHA)
-            pygame.draw.circle(surf, alpha_color, (self.size, self.size), self.size)
-            screen.blit(surf, (screen_x - self.size, screen_y - self.size))
+            self.surf.set_alpha(max(0, int(self.life)))
+            screen.blit(self.surf, (screen_x - self.size, screen_y - self.size))
+
 

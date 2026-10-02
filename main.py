@@ -6,21 +6,44 @@ from helper import Helper
 from cosmic_dust import CosmicDust
 from specialized_bodies import *
 from particle import Particle
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+class _Silent:
+    def play(self, *a, **k): pass
+
+impact_sound = pause_sound = dt_change_sound = _Silent()
 
 def handle_audio():
-    pygame.mixer.init()
-
-    pygame.mixer.music.load('sounds/backround.mp3')
-    pygame.mixer.music.set_volume(0.4)
-    pygame.mixer.music.play(-1)
-
     global impact_sound, pause_sound, dt_change_sound
 
-    impact_sound = pygame.mixer.Sound('sounds/impact.mp3')
+    def path(name):
+        return os.path.join(BASE_DIR, "sounds", name)
 
-    pause_sound = pygame.mixer.Sound('sounds/pause.mp3')
+    def load_sound(name):
+        try:
+            return pygame.mixer.Sound(path(name))
+        except (pygame.error, FileNotFoundError) as e:
+            print(f"Sound '{name}' disabled: {e}")
+            return _Silent()
 
-    dt_change_sound = pygame.mixer.Sound('sounds/dt.mp3')
+    try:
+        pygame.mixer.init()
+    except pygame.error as e:
+        print(f"Audio disabled: {e}")
+        return
+
+    try:
+        pygame.mixer.music.load(path("backround.mp3"))
+        pygame.mixer.music.set_volume(0.4)
+        pygame.mixer.music.play(-1)
+    except (pygame.error, FileNotFoundError) as e:
+        print(f"Music disabled: {e}")
+
+    impact_sound = load_sound("impact.mp3")
+    pause_sound = load_sound("pause.mp3")
+    dt_change_sound = load_sound("dt.mp3")
 
 pygame.init()
 
@@ -41,11 +64,11 @@ stars = [CosmicDust(WIDTH, HEIGHT) for _ in range(num_stars)]
 planet_list = []
 
 sun = Star("Sun", 100000, 60, (255, 150, 0), [WIDTH//2, HEIGHT//2])
-earth = Planet("Earth", 1000, 15, (0, 100, 255), [WIDTH//2 + 800, HEIGHT//2])
-moon = Moon("Moon", 5, 5, (200, 200, 200), [WIDTH//2 + 840, HEIGHT//2], earth)
+earth = Planet("Earth", 1000, 15, (0, 100, 255), [WIDTH//2 + 900, HEIGHT//2])
+moon = Moon("Moon", 5, 5, (200, 200, 200), [WIDTH//2 + 940, HEIGHT//2], earth)
 p1 = Planet("Ares", 300, 10, (200, 100, 100), [WIDTH//2 - 1000, HEIGHT//2])
-p2 = Planet("Jupiter", 3000, 25, (200, 180, 150), [WIDTH//2 + 900, HEIGHT//2])
-p3 = Planet("Neptune", 600, 18, (100, 100, 255), [WIDTH//2 + 1200, HEIGHT//2])
+p2 = Planet("Jupiter", 700, 25, (200, 180, 150), [WIDTH//2 + 1200, HEIGHT//2 - 300])
+p3 = Planet("Neptune", 600, 18, (100, 100, 255), [WIDTH//2 + 1600, HEIGHT//2])
 bh = BlackHole("Black Hole", 65000, 30, (0, 0, 0), [WIDTH//2 + 6000, HEIGHT//2 - 400])
 bh2 = BlackHole("Black Hole", 65000, 30, (0, 0, 0), [WIDTH//2 - 7000, HEIGHT//2 - 400])
 
@@ -57,6 +80,7 @@ planet_list.append(p2)
 planet_list.append(p3)
 
 sun.velocity = [2, 0]
+
 
 
 
@@ -81,6 +105,7 @@ down_sound_played = False
 all_particles = []
 
 dt = 0.1
+STEP = 0.5
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -119,45 +144,28 @@ while running:
         
     if not paused:
 
-        masses = [body.mass for body in planet_list]
-        pos0 = [body.position for body in planet_list]
-        vel0 = [body.velocity for body in planet_list]
-
-        acc1 = Helper.get_accelerations(pos0, masses)
-
-        pos2 = [[p[0] + v[0] * dt/2, p[1] + v[1] * dt/2] for p, v in zip(pos0, vel0)]
-        vel2 = [[v[0] + a[0] * dt/2, v[1] + a[1] * dt/2] for v, a in zip(vel0, acc1)]
-        acc2 = Helper.get_accelerations(pos2, masses)
-
-        pos3 = [[p[0] + v[0] * dt/2, p[1] + v[1] * dt/2] for p, v in zip(pos0, vel2)]
-        vel3 = [[v[0] + a[0] * dt/2, v[1] + a[1] * dt/2] for v, a in zip(vel0, acc2)]
-        acc3 = Helper.get_accelerations(pos3, masses)
-
-        pos4 = [[p[0] + v[0] * dt, p[1] + v[1] * dt] for p, v in zip(pos0, vel3)]
-        vel4 = [[v[0] + a[0] * dt, v[1] + a[1] * dt] for v, a in zip(vel0, acc3)]
-        acc4 = Helper.get_accelerations(pos4, masses)
-
-        for i, body in enumerate(planet_list):
-            body.position[0] += (dt/6) * (vel0[i][0] + 2*vel2[i][0] + 2*vel3[i][0] + vel4[i][0])
-            body.position[1] += (dt/6) * (vel0[i][1] + 2*vel2[i][1] + 2*vel3[i][1] + vel4[i][1])
-            
-            body.velocity[0] += (dt/6) * (acc1[i][0] + 2*acc2[i][0] + 2*acc3[i][0] + acc4[i][0])
-            body.velocity[1] += (dt/6) * (acc1[i][1] + 2*acc2[i][1] + 2*acc3[i][1] + acc4[i][1])
-
+        n = max(1, math.ceil(dt / STEP))
+        for _ in range(n):
+            Helper.rk4_step(planet_list, dt / n)      
 
         collision_pairs = []
-
         for i in range(len(planet_list)):
             for j in range(i + 1, len(planet_list)):
                 body1 = planet_list[i]
                 body2 = planet_list[j]
-
                 if Helper.check_collision(body1, body2):
                     if not (isinstance(body1, BlackHole) and isinstance(body2, BlackHole)):
                         collision_pairs.append((body1, body2))
-                        impact_sound.play()
+                        
 
+        merged = set()
         for body1, body2 in collision_pairs:
+            if body1 in merged or body2 in merged:
+                continue
+            merged.add(body1)
+            merged.add(body2)
+            impact_sound.play()
+
             impact_x = (body1.position[0] + body2.position[0]) / 2
             impact_y = (body1.position[1] + body2.position[1]) / 2
 
@@ -168,10 +176,14 @@ while running:
 
             planet_list = Helper.resolve_inelastic_collision(body1, body2, planet_list)
 
-        for body in planet_list:
-            if isinstance(body, Star):
-                sun = body
-        
+        stars_alive = [b for b in planet_list if isinstance(b, Star)]
+        if stars_alive:
+            sun = max(stars_alive, key=lambda s: s.mass)
+            for body in planet_list[:]:
+                if Helper.check_boundary(body, sun, WIDTH, HEIGHT):
+                    print(f"{body.name} has left the simulation area.")
+                    planet_list.remove(body)
+
         for planet in planet_list:
             planet.update(dt)
 
@@ -183,7 +195,12 @@ while running:
                         planet_list.remove(r)
 
         for star in stars:
-            star.update()   
+            star.update() 
+
+        for particle in all_particles[:]:
+            particle.update()
+            if particle.life <= 0:
+                all_particles.remove(particle)
 
     screen.fill((0, 0, 0))
 
@@ -202,18 +219,11 @@ while running:
         star.draw(screen)
 
     for planet in planet_list[:]:
-        if Helper.check_boundary(planet, sun, WIDTH, HEIGHT):
-            print(f"{planet.name} has left the simulation area.")
-            planet_list.remove(planet)
         planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
 
     for particle in all_particles[:]:
-        particle.update()
+        particle.draw(screen, zoom, camera_x, camera_y, WIDTH, HEIGHT) 
 
-        if particle.life <= 0:
-            all_particles.remove(particle)
-        else:
-            particle.draw(screen, zoom, camera_x, camera_y, WIDTH, HEIGHT)
 
     dt_text = font.render(f"Time Step: {dt:.1f}", True, (255, 255, 255))
     screen.blit(dt_text, (10, 10))
@@ -222,9 +232,6 @@ while running:
         pause = font.render("PAUSED - Press SPACE to Resume", True, (255, 100, 0))
         pygame.draw.rect(screen, (255, 255, 255), (WIDTH // 2 - pause.get_width() // 2 - 10, HEIGHT // 8 - 10, pause.get_width() + 20, pause.get_height() + 20))
         screen.blit(pause, (WIDTH // 2 - pause.get_width() // 2, HEIGHT // 8 ))
-        pygame.display.flip()
-        clock.tick(60)
-        continue
 
     pygame.display.flip()
     clock.tick(60)
