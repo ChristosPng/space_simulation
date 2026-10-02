@@ -117,7 +117,7 @@ class BlackHole(CelestialBody):
 
         return removed_bodies
 
-    def draw(self, screen, sun, zoom, offset_x, offset_y, WIDTH, HEIGHT):
+    def draw(self, screen, bodies, zoom, offset_x, offset_y, WIDTH, HEIGHT):
         screen_x = int((self.position[0] - offset_x) * zoom + WIDTH // 2)
         screen_y = int((self.position[1] - offset_y) * zoom + HEIGHT // 2)
 
@@ -126,7 +126,7 @@ class BlackHole(CelestialBody):
         glow_radius = int(horizon_radius * 1.5)
 
         glow_surf = Helper.create_glow_surface(glow_radius, (255, 140, 0), 150)
-        screen.blit(glow_surf, (screen_x - glow_radius * 2, screen_y - glow_radius * 2))
+        screen.blit(glow_surf, (screen_x - glow_radius, screen_y - glow_radius))
 
         pygame.draw.circle(screen, (20, 20, 20), (screen_x, screen_y), horizon_radius)
         pygame.draw.circle(screen, (0, 0, 0), (screen_x, screen_y), core_radius)

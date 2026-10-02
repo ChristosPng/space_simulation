@@ -47,10 +47,14 @@ def handle_audio():
 
 pygame.init()
 
-zoom = 1.0
+info = pygame.display.Info()
+WIDTH = info.current_w
+HEIGHT = info.current_h
 
-WIDTH = 1500
-HEIGHT = 800
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+pygame.display.set_caption("Orbital System Simulation")
+
+zoom = 1.0
 
 camera_x = WIDTH // 2
 camera_y = HEIGHT // 2
@@ -82,8 +86,6 @@ planet_list.append(p3)
 sun.velocity = [2, 0]
 
 
-
-
 for body in planet_list:
    if not isinstance(body, Star) and not isinstance(body, Moon):
         Helper.set_perfect_initial_velocity(body, sun)
@@ -95,6 +97,7 @@ for body in planet_list:
 
 running = True
 paused = False
+small_font = pygame.font.SysFont(None, 20)
 font = pygame.font.SysFont(None, 24)
 handle_audio()
 
@@ -106,6 +109,25 @@ all_particles = []
 
 dt = 0.1
 STEP = 0.5
+
+#code for gui planet arrangement
+spawning = False
+spawn_start_pos = (0,0)
+spawn_types = ["Planet", "Star", "BlackHole"]
+spawn_type_idx = 0 #default to planet
+
+type_defaults = {
+    "Planet": {"mass": 500, "radius": 12, "color": (0, 255, 150)},
+    "Star": {"mass": 80000, "radius": 50, "color": (255, 200, 50)},
+    "BlackHole": {"mass": 65000, "radius": 30, "color": (30, 30, 30)}
+}
+
+spawn_mass = type_defaults[spawn_types[spawn_type_idx]]["mass"]
+spawn_radius = type_defaults[spawn_types[spawn_type_idx]]["radius"]
+spawn_color = type_defaults[spawn_types[spawn_type_idx]]["color"]
+
+custom_count = 1
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -116,12 +138,57 @@ while running:
                 paused = not paused
                 pause_sound.play()
 
+            if event.key in (pygame.K_F11, pygame.K_f): #use "F11" or "f" key to toggle fullscreen
+                pygame.display.toggle_fullscreen() 
+
+            if event.key == pygame.K_t:  #use "T" key to toggle spawn type
+                spawn_type_idx = (spawn_type_idx + 1) % len(spawn_types)
+                spawn_mass = type_defaults[spawn_types[spawn_type_idx]]["mass"]
+                spawn_radius = type_defaults[spawn_types[spawn_type_idx]]["radius"]
+                spawn_color = type_defaults[spawn_types[spawn_type_idx]]["color"]
+
+            if event.key == pygame.K_LEFTBRACKET:  #use "[" key to decrease spawn mass
+                spawn_mass = max(1, spawn_mass - 10)
+            if event.key == pygame.K_RIGHTBRACKET: #use "]" key to increase spawn mass
+                spawn_mass += 50
+
+            if event.key == pygame.K_MINUS:  #use "-" key to decrease spawn radius
+                spawn_radius = max(2, spawn_radius - 2)
+            if event.key == pygame.K_EQUALS: #use "=" key to increase spawn radius
+                spawn_radius += 2
+
         if event.type == pygame.MOUSEWHEEL:
             if event.y > 0:
                 zoom *= 1.1
             else:
                 zoom *= 0.9
             zoom = max(0.05, min(10.0, zoom))
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            spawning = True
+            spawn_start_pos = pygame.mouse.get_pos()   
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 3 and spawning:
+            spawning = False
+            end_pos = event.pos
+            world_x = (spawn_start_pos[0] - WIDTH // 2) / zoom + camera_x
+            world_y = (spawn_start_pos[1] - HEIGHT // 2) / zoom + camera_y
+
+            vx = (spawn_start_pos[0] - end_pos[0]) * 0.02 / zoom
+            vy = (spawn_start_pos[1] - end_pos[1]) * 0.02 / zoom
+
+            obj_type = spawn_types[spawn_type_idx]
+            name = f"Custom_{obj_type}_{custom_count}"
+            custom_count += 1
+
+            if obj_type == "Star":
+                new_body = Star(name, spawn_mass, spawn_radius, spawn_color, [world_x, world_y])
+            elif obj_type == "BlackHole":
+                new_body = BlackHole(name, spawn_mass, spawn_radius, (0, 0, 0), [world_x, world_y])
+            else:
+                new_body = Planet(name, spawn_mass, spawn_radius, spawn_color, [world_x, world_y])
+
+            new_body.velocity = [vx, vy]
+            planet_list.append(new_body)
 
     keys = pygame.key.get_pressed()
 
@@ -154,8 +221,7 @@ while running:
                 body1 = planet_list[i]
                 body2 = planet_list[j]
                 if Helper.check_collision(body1, body2):
-                    if not (isinstance(body1, BlackHole) and isinstance(body2, BlackHole)):
-                        collision_pairs.append((body1, body2))
+                    collision_pairs.append((body1, body2))
                         
 
         merged = set()
@@ -227,6 +293,26 @@ while running:
 
     dt_text = font.render(f"Time Step: {dt:.1f}", True, (255, 255, 255))
     screen.blit(dt_text, (10, 10))
+
+    if spawning:
+        current_mouse = pygame.mouse.get_pos()
+        pygame.draw.line(screen, (255, 255, 255), spawn_start_pos, current_mouse, 2)
+        preview_radius = max(2, int(spawn_radius * zoom))
+        pygame.draw.circle(screen, spawn_color, spawn_start_pos, preview_radius)
+
+    dt_text = font.render(f"Time Step: {dt:.1f}", True, (255, 255, 255))
+    screen.blit(dt_text, (10, 10))
+
+    hud_lines = [
+        f"Selected Type [T]: {spawn_types[spawn_type_idx]}",
+        f"Spawn Mass [[ / ]]: {spawn_mass}",
+        f"Spawn Radius [- / =]: {spawn_radius}",
+        "Right-Click + Drag: Launch Body"
+    ]
+
+    for idx, line in enumerate(hud_lines):
+        txt = small_font.render(line, True, (200, 220, 255))
+        screen.blit(txt, (10, 35 + idx * 18))
 
     if paused:
         pause = font.render("PAUSED - Press SPACE to Resume", True, (255, 100, 0))

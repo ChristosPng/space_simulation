@@ -95,7 +95,13 @@ class Helper:
         if key not in Helper._glow_cache:
             if len(Helper._glow_cache) > 64:
                 Helper._glow_cache.clear()
-            Helper._glow_cache[key] = Helper._build_glow_surface(radius, color, intensity)
+            
+            surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            for r in range(radius, 0, -2):
+                alpha = int(intensity * (r / radius) ** 2)
+                pygame.draw.circle(surf, (*color, alpha), (radius, radius), r)
+            
+            Helper._glow_cache[key] = surf
         return Helper._glow_cache[key]
     
     @staticmethod
