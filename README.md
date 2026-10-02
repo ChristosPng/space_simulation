@@ -7,5 +7,5 @@ A Python-based orbital mechanics and space physics simulation.
 - Lightweight written in pure Python.
 
 ## How to Run
-`ash
+`bash
 python main.py
