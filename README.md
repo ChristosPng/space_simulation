@@ -10,7 +10,7 @@ A Python-based orbital mechanics and space physics simulation.
 bash
 python main.py
 
-##Controls
+## Controls
 - Space for pause
 - UP/DOWN buttons for dt change
 - Right Click and Hold for spawning new body 
