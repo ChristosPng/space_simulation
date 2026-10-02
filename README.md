@@ -17,3 +17,4 @@ python main.py
 - Cycle between bodies using "T"
 - Increase Mass using "[" and "]"
 - Increase Radius using "-" and "+"
+- Toggle FullScreen using "F" or "F11"
