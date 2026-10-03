@@ -37,6 +37,19 @@ Before running or compiling the simulation, ensure your system meets the followi
 
 ---
 
+## 💻 How to Run
+
+1. **Clone the repository**:
+   ```bash
+   git clone [https://github.com/ChristosPng/space_simulation.git](https://github.com/ChristosPng/space_simulation.git)
+   cd space_simulation
+2. **Install Dependencies**
+   ```bash
+   git install pygame
+3. **Launch the simulation**
+   ```bash
+   python main.py
+
 ## Controls 
 
 | Input | Action |
@@ -52,7 +65,7 @@ Before running or compiling the simulation, ensure your system meets the followi
 
 ---
 
-## 🚀 Native C++ Acceleration Performance
+## Native C++ Acceleration Performance
 
 The physics loop supports dual execution[cite: 17, 18]. When compiled native libraries are present, `native_physics.py` automatically offloads calculation loops to C++:
 
