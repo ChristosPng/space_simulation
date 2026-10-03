@@ -7,6 +7,7 @@ from cosmic_dust import CosmicDust
 from specialized_bodies import *
 from particle import Particle
 import os
+import native_physics
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -59,22 +60,21 @@ zoom = 1.0
 camera_x = WIDTH // 2
 camera_y = HEIGHT // 2
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Orbital System Simulation")
-
 num_stars = 400
 stars = [CosmicDust(WIDTH, HEIGHT) for _ in range(num_stars)]
+
+def orbit_pos(distance, angle_deg):
+    a = math.radians(angle_deg)
+    return [WIDTH//2 + distance * math.cos(a), HEIGHT//2 + distance * math.sin(a)]
 
 planet_list = []
 
 sun = Star("Sun", 100000, 60, (255, 150, 0), [WIDTH//2, HEIGHT//2])
-earth = Planet("Earth", 1000, 15, (0, 100, 255), [WIDTH//2 + 900, HEIGHT//2])
-moon = Moon("Moon", 5, 5, (200, 200, 200), [WIDTH//2 + 940, HEIGHT//2], earth)
-p1 = Planet("Ares", 300, 10, (200, 100, 100), [WIDTH//2 - 1000, HEIGHT//2])
-p2 = Planet("Jupiter", 700, 25, (200, 180, 150), [WIDTH//2 + 1200, HEIGHT//2 - 300])
-p3 = Planet("Neptune", 600, 18, (100, 100, 255), [WIDTH//2 + 1600, HEIGHT//2])
-bh = BlackHole("Black Hole", 65000, 30, (0, 0, 0), [WIDTH//2 + 6000, HEIGHT//2 - 400])
-bh2 = BlackHole("Black Hole", 65000, 30, (0, 0, 0), [WIDTH//2 - 7000, HEIGHT//2 - 400])
+earth = Planet("Earth", 1000, 15, (0, 100, 255), orbit_pos(900, 0))
+moon = Moon("Moon", 5, 5, (200, 200, 200), [earth.position[0] + 40, earth.position[1]], earth)
+p1 = Planet("Ares", 100, 10, (200, 100, 100), orbit_pos(400, 180))
+p2 = Planet("Jupiter", 700, 25, (200, 180, 150), orbit_pos(1800, 100))
+p3 = Planet("Neptune", 300, 18, (100, 100, 255), orbit_pos(3000, 250))
 
 planet_list.append(sun)
 planet_list.append(earth)
@@ -83,7 +83,9 @@ planet_list.append(p1)
 planet_list.append(p2)
 planet_list.append(p3)
 
-sun.velocity = [2, 0]
+px = sum(b.mass * b.velocity[0] for b in planet_list if b is not sun)
+py = sum(b.mass * b.velocity[1] for b in planet_list if b is not sun)
+sun.velocity = [-px / sun.mass, -py / sun.mass]
 
 
 for body in planet_list:
@@ -212,8 +214,9 @@ while running:
     if not paused:
 
         n = max(1, math.ceil(dt / STEP))
-        for _ in range(n):
-            Helper.rk4_step(planet_list, dt / n)      
+        if not native_physics.step(planet_list, dt, n):
+            for _ in range(n):
+                Helper.rk4_step(planet_list, dt / n)      
 
         collision_pairs = []
         for i in range(len(planet_list)):
@@ -242,12 +245,15 @@ while running:
 
             planet_list = Helper.resolve_inelastic_collision(body1, body2, planet_list)
 
-        stars_alive = [b for b in planet_list if isinstance(b, Star)]
-        if stars_alive:
-            sun = max(stars_alive, key=lambda s: s.mass)
+        total_m = sum(b.mass for b in planet_list)
+        if total_m > 0:
+            com_x = sum(b.position[0] * b.mass for b in planet_list) / total_m
+            com_y = sum(b.position[1] * b.mass for b in planet_list) / total_m
+            limit = max(WIDTH, HEIGHT) * 150          # was 50 (measured from the sun)
             for body in planet_list[:]:
-                if Helper.check_boundary(body, sun, WIDTH, HEIGHT):
-                    print(f"{body.name} has left the simulation area.")
+                dist = math.hypot(body.position[0] - com_x, body.position[1] - com_y)
+                if dist > limit:
+                    print(f"{body.name[:30]} left the simulation area ({dist:.0f} from system center)")
                     planet_list.remove(body)
 
         for planet in planet_list:
@@ -300,19 +306,18 @@ while running:
         preview_radius = max(2, int(spawn_radius * zoom))
         pygame.draw.circle(screen, spawn_color, spawn_start_pos, preview_radius)
 
-    dt_text = font.render(f"Time Step: {dt:.1f}", True, (255, 255, 255))
-    screen.blit(dt_text, (10, 10))
 
     hud_lines = [
         f"Selected Type [T]: {spawn_types[spawn_type_idx]}",
         f"Spawn Mass [[ / ]]: {spawn_mass}",
         f"Spawn Radius [- / =]: {spawn_radius}",
-        "Right-Click + Drag: Launch Body"
+        "Right-Click + Drag: Launch Body",
+        f"Physics Engine: {'C++' if native_physics.available else 'Python'}",
     ]
 
     for idx, line in enumerate(hud_lines):
-        txt = small_font.render(line, True, (200, 220, 255))
-        screen.blit(txt, (10, 35 + idx * 18))
+        txt = font.render(line, True, (200, 220, 255))
+        screen.blit(txt, (10, 35 + idx * 24))
 
     if paused:
         pause = font.render("PAUSED - Press SPACE to Resume", True, (255, 100, 0))

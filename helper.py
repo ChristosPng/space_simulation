@@ -55,7 +55,7 @@ class Helper:
         if distance == 0:
             return
 
-        orbital_velocity = morbital_velocity = math.sqrt(G * central_body.mass * distance**2 / (distance**2 + SOFTENING)**1.5)
+        orbital_velocity = math.sqrt(G * central_body.mass / distance) * 0.95
         velocity_x = -orbital_velocity * (dy / distance)
         velocity_y = orbital_velocity * (dx / distance)
         velocity_x += (random.random() - 0.5) * 0.01
@@ -71,7 +71,7 @@ class Helper:
         if distance == 0:
             return
 
-        orbital_velocity = math.sqrt(G * central_body.mass / distance)
+        orbital_velocity = math.sqrt(G * central_body.mass * distance**2 / (distance**2 + SOFTENING)**1.5)
 
         planet.velocity = [
             -orbital_velocity * (dy / distance) + central_body.velocity[0],
@@ -98,7 +98,7 @@ class Helper:
             
             surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
             for r in range(radius, 0, -2):
-                alpha = int(intensity * (r / radius) ** 2)
+                alpha = int(intensity * (1 - r / radius))
                 pygame.draw.circle(surf, (*color, alpha), (radius, radius), r)
             
             Helper._glow_cache[key] = surf
@@ -163,7 +163,9 @@ class Helper:
         pos = [px, py]
 
         if isinstance(body1, BlackHole) or isinstance(body2, BlackHole):
-            new_body = BlackHole(f"{body1.name}-{body2.name}", total_mass, new_radius, new_color, pos)
+            holes = [b for b in (body1, body2) if isinstance(b, BlackHole)]
+            biggest = max(holes, key=lambda b: b.mass)
+            new_body = BlackHole(biggest.name, total_mass, new_radius, new_color, pos)
         elif isinstance(body1, Star) or isinstance(body2, Star):
             stars = [b for b in (body1, body2) if isinstance(b, Star)]
             star = max(stars, key=lambda s: s.mass)
@@ -171,7 +173,8 @@ class Helper:
             new_body.age = star.age
             new_body.lifetime = star.lifetime 
         else: 
-            new_body = Planet(f"{body1.name}-{body2.name}", total_mass, new_radius, new_color, pos)
+            biggest = max((body1, body2), key=lambda b: b.mass)
+            new_body = Planet(biggest.name, total_mass, new_radius, new_color, pos)
         
         new_body.velocity = [vx, vy]
 

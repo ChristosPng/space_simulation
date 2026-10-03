@@ -1,4 +1,16 @@
+*.dll
+*.so
+*.dylib
+*.exe
+*.o
+*.obj
+
+build/
+dist/
+*.spec
+
 __pycache__/
 *.pyc
-.venv/
+
 .vscode/
+.idea/

@@ -13,6 +13,22 @@ def _get_shadow(sr):
         _shadow_cache[sr] = s
     return s
 
+STAR_STAGES = [
+    (0.00, (255, 235, 140)),   # young: bright yellow
+    (0.35, (255, 170,  60)),   # mature: orange
+    (0.65, (230,  60,  40)),   # red giant
+    (0.85, (255, 225, 200)),   # collapsing: hot pale cream
+    (1.00, (170, 200, 255)),   # white dwarf: blue-white
+]
+
+def star_color(t):
+    t = max(0.0, min(1.0, t))
+    for (t0, c0), (t1, c1) in zip(STAR_STAGES, STAR_STAGES[1:]):
+        if t <= t1:
+            f = (t - t0) / (t1 - t0)
+            return tuple(int(a + (b - a) * f) for a, b in zip(c0, c1))
+    return STAR_STAGES[-1][1]
+
 class Star(CelestialBody):
     def __init__(self, name, mass, radius, color, position):
         super().__init__(name, mass, radius, color, position, immovable=False)
@@ -29,23 +45,22 @@ class Star(CelestialBody):
 
     def draw(self, screen, bodies, zoom, offset_x, offset_y, WIDTH, HEIGHT):
         # draw color based on age
-        t = min(self.age / self.lifetime, 1.0)
-        if t < 0.33:
-            self.color = (255, int(255 * (1 - t / 0.33)), 0)
-        elif t < 0.66:
-            self.color = (int(255 * (1 - (t - 0.33)/0.33)), 0, int(255 * ((t - 0.33)/0.33)))
-        else:
-            self.color = (int(150 + 105*(t-0.66)/0.34), int(200 + 55*(t-0.66)/0.34), 255)
+        self.color = star_color(self.age / self.lifetime)
+
+        sx = int((self.position[0] - offset_x) * zoom + WIDTH // 2)
+        sy = int((self.position[1] - offset_y) * zoom + HEIGHT // 2)
+        glow_r = int(max(1, self.radius * zoom) * 2.2)
+        if 6 <= glow_r <= 300:                       # skip when tiny or huge (zoomed way in)
+            q = tuple((c // 16) * 16 for c in self.color)   # quantize so the glow cache isn't rebuilt every frame
+            glow = Helper.create_glow_surface(glow_r, q, 110)
+            screen.blit(glow, (sx - glow_r, sy - glow_r))
+
+        self.draw_trail(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
 
         # draw star 
         super().draw(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
 
-        for idx, pos in enumerate(self.trail):
-            tx = (pos[0] - offset_x) * zoom + WIDTH // 2
-            ty = (pos[1] - offset_y) * zoom + HEIGHT // 2
-            alpha = int(255 * (idx / len(self.trail)))
-            pygame.draw.circle(screen, (alpha, alpha, alpha), (int(tx), int(ty)), max(1, int(1 * zoom)))
-
+        
 class Planet(CelestialBody):
     def __init__(self, name, mass, radius, color, position):
         super().__init__(name, mass, radius, color, position)
