@@ -41,7 +41,7 @@ Before running or compiling the simulation, ensure your system meets the followi
 
 1. **Clone the repository**:
    ```bash
-   git clone [https://github.com/ChristosPng/space_simulation.git](https://github.com/ChristosPng/space_simulation.git)
+   git clone https://github.com/ChristosPng/space_simulation.git
    cd space_simulation
 2. **Install Dependencies**
    ```bash
