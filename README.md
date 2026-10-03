@@ -37,7 +37,7 @@ Before running or compiling the simulation, ensure your system meets the followi
 
 ---
 
-## 💻 How to Run
+## How to Run
 
 1. **Clone the repository**:
    ```bash
