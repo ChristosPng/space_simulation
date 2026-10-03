@@ -10,17 +10,17 @@ A modular, high-performance 2D N-body gravitational physics simulation built in 
 
 ## Key Features
 
-- **4th-Order Runge-Kutta (RK4) Integration**: High-precision numerical differential equation solver for accurate long-term orbital stability[cite: 12, 16].
+- **4th-Order Runge-Kutta (RK4) Integration**: High-precision numerical differential equation solver for accurate long-term orbital stability.
 - **Hybrid C++/Python Physics Engine**:
   - Pure Python physics engine fallback for universal cross-platform compatibility.
-  - Native C++ acceleration (`physics.dll` / `.so`) delivering **50x–100x speedups** for large body counts[cite: 12, 18].
+  - Native C++ acceleration (`physics.dll` / `.so`) delivering **50x–100x speedups** for large body counts.
 - **Specialized Body Mechanics**:
-  - **Stars**: Dynamic stellar evolution color shifting (Yellow -> Red Giant -> White Dwarf) with cache-quantized visual radial glows[cite: 21].
-  - **Black Holes**: Event horizon gravitational accretion, body absorption, and real-time merger logic[cite: 21].
-  - **Planets & Moons**: Realistic shadows calculated relative to nearest stars and continuous trail rendering[cite: 21].
-- **Inelastic Collision & Conservation of Momentum**: Fully resolved mass, momentum, and volumetric merging with particle explosion effects[cite: 16, 17, 19].
-- **Interactive GUI Spawning**: On-the-fly "slingshot" drag-and-launch system to spawn planets, stars, or black holes live during runtime[cite: 17].
-- **Smooth Dynamic Center-of-Mass Camera**: Automated tracking relative to total system barycenter with zoom controls[cite: 17].
+  - **Stars**: Dynamic stellar evolution color shifting (Yellow -> Red Giant -> White Dwarf) with cache-quantized visual radial glows.
+  - **Black Holes**: Event horizon gravitational accretion, body absorption, and real-time merger logic.
+  - **Planets & Moons**: Realistic shadows calculated relative to nearest stars and continuous trail rendering.
+- **Inelastic Collision & Conservation of Momentum**: Fully resolved mass, momentum, and volumetric merging with particle explosion effects.
+- **Interactive GUI Spawning**: On-the-fly "slingshot" drag-and-launch system to spawn planets, stars, or black holes live during runtime.
+- **Smooth Dynamic Center-of-Mass Camera**: Automated tracking relative to total system barycenter with zoom controls.
 
 ---
 
@@ -28,8 +28,8 @@ A modular, high-performance 2D N-body gravitational physics simulation built in 
 
 Before running or compiling the simulation, ensure your system meets the following requirements:
 
-1. **Python**: Version `3.8` or higher[cite: 18].
-2. **Pygame**: Version `2.0` or higher (`pip install pygame`)[cite: 17].
+1. **Python**: Version `3.8` or higher.
+2. **Pygame**: Version `2.0` or higher (`pip install pygame`).
 3. **C++ Compiler (`g++`)** *(Required only for compiling the native C++ acceleration library)*:
    - **Windows**: [MinGW-w64](https://www.mingw-w64.org/) or [MSYS2](https://www.msys2.org/) (ensure `g++` is added to system `PATH`).
    - **Linux**: Install via package manager (`sudo apt install build-essential g++`).
@@ -41,20 +41,20 @@ Before running or compiling the simulation, ensure your system meets the followi
 
 | Input | Action |
 | :--- | :--- |
-| **Right-Click + Drag** | Aim velocity vector and launch selected celestial body[cite: 17] |
-| **T** | Toggle spawn body type (*Planet* $\rightarrow$ *Star* $\rightarrow$ *BlackHole*)[cite: 17] |
-| **`[` / `]`** | Decrease / Increase spawn body mass[cite: 17] |
-| **`-` / `=`** | Decrease / Increase spawn body radius[cite: 17] |
+| **Right-Click + Drag** | Aim velocity vector and launch selected celestial body |
+| **T** | Toggle spawn body type (*Planet* $\rightarrow$ *Star* $\rightarrow$ *BlackHole*) |
+| **`[` / `]`** | Decrease / Increase spawn body mass |
+| **`-` / `=`** | Decrease / Increase spawn body radius |
 | **Spacebar** | Pause / Resume physics simulation[cite: 17] |
-| **Up / Down Arrows** | Increase / Decrease time step ($\Delta t$)[cite: 17] |
-| **Mouse Wheel** | Zoom in / Zoom out[cite: 17] |
-| **F11 / F** | Toggle Fullscreen mode[cite: 17] |
+| **Up / Down Arrows** | Increase / Decrease time step ($\Delta t$) |
+| **Mouse Wheel** | Zoom in / Zoom out |
+| **F11 / F** | Toggle Fullscreen mode |
 
 ---
 
 ## 🚀 Native C++ Acceleration Performance
 
-The physics loop supports dual execution[cite: 17, 18]. When compiled native libraries are present, `native_physics.py` automatically offloads calculation loops to C++[cite: 17, 18]:
+The physics loop supports dual execution[cite: 17, 18]. When compiled native libraries are present, `native_physics.py` automatically offloads calculation loops to C++:
 
 | Body Count ($N$) | Python (`ms/frame`) | C++ Native (`ms/frame`) | Speedup |
 | :--- | :--- | :--- | :--- |
