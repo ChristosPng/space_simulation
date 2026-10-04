@@ -105,6 +105,8 @@ class Planet(CelestialBody):
 class BlackHole(CelestialBody):
     def __init__(self, name, mass, radius, color, position):
         super().__init__(name, mass, radius, (0,0,0), position)
+        self.base_radius = radius       
+        self.base_mass = mass
         self.event_horizon = radius * 3
         self.is_static = False
 
@@ -112,7 +114,7 @@ class BlackHole(CelestialBody):
         if not self.is_static:
             super().update(dt)
 
-        self.radius = self.mass * 0.0001 
+        self.radius = self.base_radius * self.mass / self.base_mass
         self.event_horizon = self.radius * 3
 
     def attract(self, bodies):

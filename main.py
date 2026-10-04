@@ -8,6 +8,7 @@ from specialized_bodies import *
 from particle import Particle
 import os
 import native_physics
+from menu import run_menu
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -60,42 +61,45 @@ zoom = 1.0
 camera_x = WIDTH // 2
 camera_y = HEIGHT // 2
 
-num_stars = 400
+num_stars = 500
 stars = [CosmicDust(WIDTH, HEIGHT) for _ in range(num_stars)]
 
 def orbit_pos(distance, angle_deg):
     a = math.radians(angle_deg)
     return [WIDTH//2 + distance * math.cos(a), HEIGHT//2 + distance * math.sin(a)]
 
-planet_list = []
+def build_solar_system():
+    sun = Star("Sun", 100000, 60, (255, 150, 0), [WIDTH//2, HEIGHT//2])
+    earth = Planet("Earth", 1000, 15, (0, 100, 255), orbit_pos(900, 0))
+    moon = Moon("Moon", 5, 5, (200, 200, 200), [earth.position[0] + 40, earth.position[1]], earth)
+    p1 = Planet("Ares", 100, 10, (200, 100, 100), orbit_pos(400, 180))
+    p2 = Planet("Jupiter", 700, 25, (200, 180, 150), orbit_pos(1800, 100))
+    p3 = Planet("Neptune", 300, 18, (100, 100, 255), orbit_pos(3000, 250))
+    bodies = [sun, earth, moon, p1, p2, p3]
 
-sun = Star("Sun", 100000, 60, (255, 150, 0), [WIDTH//2, HEIGHT//2])
-earth = Planet("Earth", 1000, 15, (0, 100, 255), orbit_pos(900, 0))
-moon = Moon("Moon", 5, 5, (200, 200, 200), [earth.position[0] + 40, earth.position[1]], earth)
-p1 = Planet("Ares", 100, 10, (200, 100, 100), orbit_pos(400, 180))
-p2 = Planet("Jupiter", 700, 25, (200, 180, 150), orbit_pos(1800, 100))
-p3 = Planet("Neptune", 300, 18, (100, 100, 255), orbit_pos(3000, 250))
+    for body in bodies:
+        if not isinstance(body, Star) and not isinstance(body, Moon):
+            Helper.set_perfect_initial_velocity(body, sun)
+    for body in bodies:
+        if isinstance(body, Moon):
+            Helper.set_perfect_initial_velocity(body, body.orb_planet)
 
-planet_list.append(sun)
-planet_list.append(earth)
-planet_list.append(moon)
-planet_list.append(p1)
-planet_list.append(p2)
-planet_list.append(p3)
+    px = sum(b.mass * b.velocity[0] for b in bodies if b is not sun)
+    py = sum(b.mass * b.velocity[1] for b in bodies if b is not sun)
+    sun.velocity = [-px / sun.mass, -py / sun.mass]
+    return bodies
 
-px = sum(b.mass * b.velocity[0] for b in planet_list if b is not sun)
-py = sum(b.mass * b.velocity[1] for b in planet_list if b is not sun)
-sun.velocity = [-px / sun.mass, -py / sun.mass]
+handle_audio()
 
+choice = run_menu(screen, stars, WIDTH, HEIGHT,
+                  footer=f"Physics engine: {'C++' if native_physics.available else 'Python'}")
 
-for body in planet_list:
-   if not isinstance(body, Star) and not isinstance(body, Moon):
-        Helper.set_perfect_initial_velocity(body, sun)
+if choice == "quit":
+    pygame.quit()
+    sys.exit()
 
-for body in planet_list:
-    if isinstance(body, Moon):
-        Helper.set_perfect_initial_velocity(body, body.orb_planet)
-
+planet_list = build_solar_system() if choice == "start" else []
+zoom = 0.25 if choice == "start" else 1.0
 
 running = True
 paused = False
@@ -121,7 +125,7 @@ spawn_type_idx = 0 #default to planet
 type_defaults = {
     "Planet": {"mass": 500, "radius": 12, "color": (0, 255, 150)},
     "Star": {"mass": 80000, "radius": 50, "color": (255, 200, 50)},
-    "BlackHole": {"mass": 65000, "radius": 30, "color": (30, 30, 30)}
+    "BlackHole": {"mass": 300000, "radius": 30, "color": (30, 30, 30)}
 }
 
 spawn_mass = type_defaults[spawn_types[spawn_type_idx]]["mass"]
@@ -129,8 +133,10 @@ spawn_radius = type_defaults[spawn_types[spawn_type_idx]]["radius"]
 spawn_color = type_defaults[spawn_types[spawn_type_idx]]["color"]
 
 custom_count = 1
+menu_btn = pygame.Rect(WIDTH - 160, 10, 150, 38)
 
 while running:
+    back_to_menu = False
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -150,9 +156,9 @@ while running:
                 spawn_color = type_defaults[spawn_types[spawn_type_idx]]["color"]
 
             if event.key == pygame.K_LEFTBRACKET:  #use "[" key to decrease spawn mass
-                spawn_mass = max(1, spawn_mass - 10)
+                spawn_mass = max(1, int(spawn_mass / 1.25))
             if event.key == pygame.K_RIGHTBRACKET: #use "]" key to increase spawn mass
-                spawn_mass += 50
+                spawn_mass = int(spawn_mass * 1.25) + 1
 
             if event.key == pygame.K_MINUS:  #use "-" key to decrease spawn radius
                 spawn_radius = max(2, spawn_radius - 2)
@@ -165,6 +171,9 @@ while running:
             else:
                 zoom *= 0.9
             zoom = max(0.05, min(10.0, zoom))
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and menu_btn.collidepoint(event.pos):
+            back_to_menu = True
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
             spawning = True
@@ -191,6 +200,21 @@ while running:
 
             new_body.velocity = [vx, vy]
             planet_list.append(new_body)
+    
+    if back_to_menu:
+        choice = run_menu(screen, stars, WIDTH, HEIGHT,
+                          footer=f"Physics engine: {'C++' if native_physics.available else 'Python'}")
+        if choice == "quit":
+            running = False
+            continue
+        planet_list = build_solar_system() if choice == "start" else []
+        zoom = 0.25 if choice == "start" else 1.0
+        camera_x, camera_y = WIDTH // 2, HEIGHT // 2
+        all_particles = []
+        paused = False
+        spawning = False
+        dt = 0.1
+        custom_count = 1
 
     keys = pygame.key.get_pressed()
 
@@ -318,6 +342,12 @@ while running:
     for idx, line in enumerate(hud_lines):
         txt = font.render(line, True, (200, 220, 255))
         screen.blit(txt, (10, 35 + idx * 24))
+
+    hovered = menu_btn.collidepoint(pygame.mouse.get_pos())
+    pygame.draw.rect(screen, (45, 60, 105) if hovered else (22, 28, 48), menu_btn, border_radius=10)
+    pygame.draw.rect(screen, (255, 170, 60) if hovered else (60, 70, 100), menu_btn, width=2, border_radius=10)
+    label = font.render("Main Menu", True, (255, 255, 255) if hovered else (210, 225, 255))
+    screen.blit(label, label.get_rect(center=menu_btn.center))
 
     if paused:
         pause = font.render("PAUSED - Press SPACE to Resume", True, (255, 100, 0))
