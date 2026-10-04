@@ -78,7 +78,7 @@ Before running or compiling the simulation, ensure your system meets the followi
 
 ## Native C++ Acceleration Performance
 
-The physics loop supports dual execution[cite: 17, 18]. When compiled native libraries are present, `native_physics.py` automatically offloads calculation loops to C++:
+The physics loop supports dual execution. When compiled native libraries are present, `native_physics.py` automatically offloads calculation loops to C++:
 
 | Body Count ($N$) | Python (`ms/frame`) | C++ Native (`ms/frame`) | Speedup |
 | :--- | :--- | :--- | :--- |
@@ -86,6 +86,6 @@ The physics loop supports dual execution[cite: 17, 18]. When compiled native lib
 | **100** | ~24.0 ms | ~0.25 ms | **~96x** |
 | **400** | ~380.0 ms | ~3.80 ms | **~100x** |
 
-To run the comparative benchmark suite locally[cite: 12]:
+To run the comparative benchmark suite locally:
 ```bash
 python bench.py
