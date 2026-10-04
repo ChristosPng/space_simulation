@@ -69,7 +69,7 @@ Before running or compiling the simulation, ensure your system meets the followi
 | **T** | Toggle spawn body type (*Planet* $\rightarrow$ *Star* $\rightarrow$ *BlackHole*) |
 | **`[` / `]`** | Decrease / Increase spawn body mass |
 | **`-` / `=`** | Decrease / Increase spawn body radius |
-| **Spacebar** | Pause / Resume physics simulation[cite: 17] |
+| **Spacebar** | Pause / Resume physics simulation |
 | **Up / Down Arrows** | Increase / Decrease time step ($\Delta t$) |
 | **Mouse Wheel** | Zoom in / Zoom out |
 | **F11 / F** | Toggle Fullscreen mode |
