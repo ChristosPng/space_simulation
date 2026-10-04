@@ -24,6 +24,17 @@ A modular, high-performance 2D N-body gravitational physics simulation built in 
 
 ---
 
+## How to Play (Recommended)
+
+To jump straight into the simulation without setting up a coding environment:
+1. Navigate to the **[Releases](https://github.com/ChristosPng/space_simulation/releases)** section on the right side of this page.
+2. Download the latest `.exe` file.
+3. Double-click the downloaded file to launch the sandbox. No installation required!
+
+## For Developers (Run from Source)
+
+If you want to experiment with the code and run the simulation directly from your terminal:
+
 ## Prerequisites
 
 Before running or compiling the simulation, ensure your system meets the following requirements:
@@ -45,7 +56,7 @@ Before running or compiling the simulation, ensure your system meets the followi
    cd space_simulation
 2. **Install Dependencies**
    ```bash
-   git install pygame
+   pip install pygame
 3. **Launch the simulation**
    ```bash
    python main.py
