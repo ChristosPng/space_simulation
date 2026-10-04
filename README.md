@@ -24,6 +24,17 @@ A modular, high-performance 2D N-body gravitational physics simulation built in 
 
 ---
 
+## How to Play (Recommended)
+
+To jump straight into the simulation without setting up a coding environment:
+1. Navigate to the **[Releases](https://github.com/ChristosPng/space_simulation/releases)** section on the right side of this page.
+2. Download the latest `.exe` file.
+3. Double-click the downloaded file to launch the sandbox. No installation required!
+
+## For Developers (Run from Source)
+
+If you want to experiment with the code and run the simulation directly from your terminal:
+
 ## Prerequisites
 
 Before running or compiling the simulation, ensure your system meets the following requirements:
@@ -45,7 +56,7 @@ Before running or compiling the simulation, ensure your system meets the followi
    cd space_simulation
 2. **Install Dependencies**
    ```bash
-   git install pygame
+   pip install pygame
 3. **Launch the simulation**
    ```bash
    python main.py
@@ -67,7 +78,7 @@ Before running or compiling the simulation, ensure your system meets the followi
 
 ## Native C++ Acceleration Performance
 
-The physics loop supports dual execution[cite: 17, 18]. When compiled native libraries are present, `native_physics.py` automatically offloads calculation loops to C++:
+The physics loop supports dual execution. When compiled native libraries are present, `native_physics.py` automatically offloads calculation loops to C++:
 
 | Body Count ($N$) | Python (`ms/frame`) | C++ Native (`ms/frame`) | Speedup |
 | :--- | :--- | :--- | :--- |
@@ -75,6 +86,6 @@ The physics loop supports dual execution[cite: 17, 18]. When compiled native lib
 | **100** | ~24.0 ms | ~0.25 ms | **~96x** |
 | **400** | ~380.0 ms | ~3.80 ms | **~100x** |
 
-To run the comparative benchmark suite locally[cite: 12]:
+To run the comparative benchmark suite locally:
 ```bash
 python bench.py
