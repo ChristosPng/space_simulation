@@ -31,7 +31,7 @@ def star_color(t):
 
 class Star(CelestialBody):
     def __init__(self, name, mass, radius, color, position):
-        super().__init__(name, mass, radius, color, position, immovable=False)
+        super().__init__(name, mass, radius, color, position, immovable=False, spin_rate=5.0)
         self.lifetime = 10000
         self.trail = []
         self.max_trail_length = 400
@@ -63,7 +63,7 @@ class Star(CelestialBody):
         
 class Planet(CelestialBody):
     def __init__(self, name, mass, radius, color, position):
-        super().__init__(name, mass, radius, color, position)
+        super().__init__(name, mass, radius, color, position, spin_rate=25.0)
         self.trail = []
         self.max_trail_length = 400
         self.closest_star = None

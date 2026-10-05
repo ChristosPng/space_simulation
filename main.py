@@ -126,9 +126,9 @@ spawn_types = ["Planet", "Star", "BlackHole"]
 spawn_type_idx = 0 #default to planet
 
 type_defaults = {
-    "Planet": {"mass": 500, "radius": 12, "color": (0, 255, 150)},
-    "Star": {"mass": 80000, "radius": 50, "color": (255, 200, 50)},
-    "BlackHole": {"mass": 300000, "radius": 30, "color": (30, 30, 30)}
+    "Planet": {"mass": 500, "radius": 12, "color": (0, 255, 150), "max_mass": 10000, "max_radius": 40},
+    "Star": {"mass": 80000, "radius": 50, "color": (255, 200, 50), "max_mass": 5000000, "max_radius": 250},
+    "BlackHole": {"mass": 300000, "radius": 30, "color": (30, 30, 30), "max_mass": 20000000, "max_radius": 100}
 }
 
 spawn_mass = type_defaults[spawn_types[spawn_type_idx]]["mass"]
@@ -164,15 +164,23 @@ while running:
                 spawn_radius = type_defaults[spawn_types[spawn_type_idx]]["radius"]
                 spawn_color = type_defaults[spawn_types[spawn_type_idx]]["color"]
 
-            if event.key == pygame.K_LEFTBRACKET:  #use "[" key to decrease spawn mass
-                spawn_mass = max(1, int(spawn_mass / 1.25))
-            if event.key == pygame.K_RIGHTBRACKET: #use "]" key to increase spawn mass
-                spawn_mass = int(spawn_mass * 1.25) + 1
+            if event.key == pygame.K_LEFTBRACKET: #use "[" to decrease mass
+                mag = 10 ** (len(str(int(spawn_mass))) - 1)
+                if spawn_mass == mag:
+                    mag = max(1, mag // 10)
+                spawn_mass = max(1, spawn_mass - mag)
 
-            if event.key == pygame.K_MINUS:  #use "-" key to decrease spawn radius
+            if event.key == pygame.K_RIGHTBRACKET: #use "[" to increase mass
+                max_m = type_defaults[spawn_types[spawn_type_idx]]["max_mass"]
+                mag = 10 ** (len(str(int(spawn_mass))) - 1)
+                spawn_mass = min(max_m, spawn_mass + mag)
+
+            if event.key == pygame.K_MINUS: #use "-" to decrease radius
                 spawn_radius = max(2, spawn_radius - 2)
-            if event.key == pygame.K_EQUALS: #use "=" key to increase spawn radius
-                spawn_radius += 2
+
+            if event.key == pygame.K_EQUALS: ##use "+" to increase radius
+                max_r = type_defaults[spawn_types[spawn_type_idx]]["max_radius"]
+                spawn_radius = min(max_r, spawn_radius + 2)
 
         if event.type == pygame.MOUSEWHEEL:
             old_zoom = zoom

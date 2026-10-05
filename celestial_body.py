@@ -2,7 +2,7 @@ import pygame
 import math
 
 class CelestialBody:
-    def __init__(self, name, mass, radius, color, position, immovable=False):
+    def __init__(self, name, mass, radius, color, position, immovable=False, spin_rate=20):
         self.name = name
         self.mass = mass
         self.radius = radius
@@ -12,6 +12,8 @@ class CelestialBody:
         self.acceleration = [0, 0]
         self.immovable = immovable
         self.age = 0
+        self.angle = 0.0
+        self.spin_rate = spin_rate
 
     def apply_force(self, force):
         if self.immovable: return
@@ -20,14 +22,15 @@ class CelestialBody:
 
     def update(self, dt):
         self.age += dt
+        self.angle = (self.angle + self.spin_rate * dt) % 360.0
 
     def draw(self, screen, zoom, offset_x, offset_y, WIDTH, HEIGHT):
         # basic position calculation for everything
         screen_x = (self.position[0] - offset_x) * zoom + WIDTH // 2
         screen_y = (self.position[1] - offset_y) * zoom + HEIGHT // 2
         scaled_radius = max(1, int(self.radius * zoom))
-        
-        pygame.draw.circle(screen, self.color, (int(screen_x), int(screen_y)), scaled_radius)
+
+        pygame.draw.circle(screen, self.color, (int(screen_x), int(screen_y)), scaled_radius)        
         return screen_x, screen_y, scaled_radius
 
     def draw_trail(self, screen, zoom, offset_x, offset_y, WIDTH, HEIGHT, step=4, segs=4):
