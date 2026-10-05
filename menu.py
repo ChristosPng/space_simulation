@@ -24,16 +24,14 @@ CONTROLS = [
     ("[  and  ]", "Decrease / increase spawn mass"),
     ("-  and  =", "Decrease / increase spawn radius"),
     ("F or F11", "Toggle fullscreen"),
-    ("Esc", "Quit"),
+    ("Left-click + drag", "Pan the camera"),
+    ("C", "Camera follows the system again"),
 ]
 
-def _draw_background(screen, stars):
+def _draw_background(screen):
     screen.fill((0,0,0))
-    for s in stars:
-        s.update()
-        s.draw(screen)
 
-def _controls_screen(screen, clock, stars, width, height):
+def _controls_screen(screen, clock, width, height):
     title_font = pygame.font.SysFont(None, int(height * 0.07))
     row_font = pygame.font.SysFont(None, int(height * 0.035))
     hint_font = pygame.font.SysFont(None, int(height * 0.028))
@@ -70,7 +68,7 @@ def _controls_screen(screen, clock, stars, width, height):
         pygame.display.flip()
         clock.tick(60)
 
-def run_menu(screen, stars, width, height, footer=""):
+def run_menu(screen, width, height, footer=""):
     clock = pygame.time.Clock()
     title_font = pygame.font.SysFont(None, int(height * 0.11))
     sub_font = pygame.font.SysFont(None, int(height * 0.035))
@@ -118,7 +116,7 @@ def run_menu(screen, stars, width, height, footer=""):
         elif chosen:
             return chosen
 
-        _draw_background(screen, stars)
+        _draw_background(screen)
 
         title = title_font.render("ORBITAL SYSTEM", True, ACCENT)
         title_y = int(height * 0.15)

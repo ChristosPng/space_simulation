@@ -3,12 +3,12 @@ import math
 import sys
 from celestial_body import CelestialBody
 from helper import Helper
-from cosmic_dust import CosmicDust
 from specialized_bodies import *
 from particle import Particle
 import os
 import native_physics
 from menu import run_menu
+from starfield import ParallaxStars
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -61,8 +61,7 @@ zoom = 1.0
 camera_x = WIDTH // 2
 camera_y = HEIGHT // 2
 
-num_stars = 500
-stars = [CosmicDust(WIDTH, HEIGHT) for _ in range(num_stars)]
+starfield = ParallaxStars(WIDTH, HEIGHT)
 
 def orbit_pos(distance, angle_deg):
     a = math.radians(angle_deg)
@@ -87,11 +86,15 @@ def build_solar_system():
     px = sum(b.mass * b.velocity[0] for b in bodies if b is not sun)
     py = sum(b.mass * b.velocity[1] for b in bodies if b is not sun)
     sun.velocity = [-px / sun.mass, -py / sun.mass]
+
+    for body in bodies:
+        body.velocity[0] += 1
+        body.velocity[1] += 1
     return bodies
 
 handle_audio()
 
-choice = run_menu(screen, stars, WIDTH, HEIGHT,
+choice = run_menu(screen, WIDTH, HEIGHT,
                   footer=f"Physics engine: {'C++' if native_physics.available else 'Python'}")
 
 if choice == "quit":
@@ -135,6 +138,9 @@ spawn_color = type_defaults[spawn_types[spawn_type_idx]]["color"]
 custom_count = 1
 menu_btn = pygame.Rect(WIDTH - 160, 10, 150, 38)
 
+dragging = False
+follow_cam = True
+
 while running:
     back_to_menu = False
     for event in pygame.event.get():
@@ -148,6 +154,9 @@ while running:
 
             if event.key in (pygame.K_F11, pygame.K_f): #use "F11" or "f" key to toggle fullscreen
                 pygame.display.toggle_fullscreen() 
+
+            if event.key == pygame.K_c:  #use "C" for camera to follow the system
+                follow_cam = True
 
             if event.key == pygame.K_t:  #use "T" key to toggle spawn type
                 spawn_type_idx = (spawn_type_idx + 1) % len(spawn_types)
@@ -166,14 +175,34 @@ while running:
                 spawn_radius += 2
 
         if event.type == pygame.MOUSEWHEEL:
+            old_zoom = zoom
             if event.y > 0:
                 zoom *= 1.1
             else:
                 zoom *= 0.9
             zoom = max(0.05, min(10.0, zoom))
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and menu_btn.collidepoint(event.pos):
-            back_to_menu = True
+            if not follow_cam:
+                mx, my = pygame.mouse.get_pos()
+                camera_x += (mx - WIDTH // 2) * (1 / old_zoom - 1 / zoom)
+                camera_y += (my - HEIGHT // 2) * (1 / old_zoom - 1 / zoom)
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if menu_btn.collidepoint(event.pos):
+                back_to_menu = True
+            else:
+                dragging = True
+        
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            dragging = False
+
+        if event.type == pygame.MOUSEMOTION and dragging:
+            if event.buttons[0]:
+                follow_cam = False                 
+                camera_x -= event.rel[0] / zoom
+                camera_y -= event.rel[1] / zoom
+            else:
+                dragging = False
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
             spawning = True
@@ -202,7 +231,11 @@ while running:
             planet_list.append(new_body)
     
     if back_to_menu:
-        choice = run_menu(screen, stars, WIDTH, HEIGHT,
+        camera_x, camera_y = WIDTH // 2, HEIGHT // 2
+        follow_cam = True
+        dragging = False
+        all_particles = []
+        choice = run_menu(screen, WIDTH, HEIGHT,
                           footer=f"Physics engine: {'C++' if native_physics.available else 'Python'}")
         if choice == "quit":
             running = False
@@ -290,8 +323,6 @@ while running:
                     if r in planet_list:
                         planet_list.remove(r)
 
-        for star in stars:
-            star.update() 
 
         for particle in all_particles[:]:
             particle.update()
@@ -300,19 +331,19 @@ while running:
 
     screen.fill((0, 0, 0))
 
-    total_mass = sum(body.mass for body in planet_list)
-    if total_mass > 0:
-        target_x = sum(body.position[0] * body.mass for body in planet_list) / total_mass
-        target_y = sum(body.position[1] * body.mass for body in planet_list) / total_mass
+    if follow_cam:
+        total_mass = sum(body.mass for body in planet_list)
+        if total_mass > 0:
+            target_x = sum(body.position[0] * body.mass for body in planet_list) / total_mass
+            target_y = sum(body.position[1] * body.mass for body in planet_list) / total_mass
 
-        camera_x += (target_x - camera_x) * 0.01
-        camera_y += (target_y - camera_y) * 0.01
-    else:
-        camera_x += (WIDTH//2 - camera_x) 
-        camera_y += (HEIGHT//2 - camera_y) 
+            camera_x += (target_x - camera_x) * 0.01
+            camera_y += (target_y - camera_y) * 0.01
+        else:
+            camera_x += (WIDTH//2 - camera_x)
+            camera_y += (HEIGHT//2 - camera_y) 
 
-    for star in stars:
-        star.draw(screen)
+    starfield.draw(screen, camera_x, camera_y, zoom)
 
     for planet in planet_list[:]:
         planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
@@ -337,6 +368,7 @@ while running:
         f"Spawn Radius [- / =]: {spawn_radius}",
         "Right-Click + Drag: Launch Body",
         f"Physics Engine: {'C++' if native_physics.available else 'Python'}",
+        f"Camera [C]: {'Following' if follow_cam else 'Free (left-drag to pan)'}",
     ]
 
     for idx, line in enumerate(hud_lines):
