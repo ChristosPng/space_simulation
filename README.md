@@ -73,6 +73,8 @@ Before running or compiling the simulation, ensure your system meets the followi
 | **Up / Down Arrows** | Increase / Decrease time step ($\Delta t$) |
 | **Mouse Wheel** | Zoom in / Zoom out |
 | **F11 / F** | Toggle Fullscreen mode |
+| **Left Mouse Button and drag**| For free moving camera |
+| **C** | Camera Lock |
 
 ---
 
