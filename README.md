@@ -11,6 +11,7 @@ A modular, high-performance 2D N-body gravitational physics simulation built in 
 ## Key Features
 
 - **4th-Order Runge-Kutta (RK4) Integration**: High-precision numerical differential equation solver for accurate long-term orbital stability.
+- **Dynamic Texture Generation using Perlin Noise**
 - **Hybrid C++/Python Physics Engine**:
   - Pure Python physics engine fallback for universal cross-platform compatibility.
   - Native C++ acceleration (`physics.dll` / `.so`) delivering **50x–100x speedups** for large body counts.
