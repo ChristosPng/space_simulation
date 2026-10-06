@@ -2,6 +2,7 @@ from celestial_body import CelestialBody
 import pygame
 import math
 from helper import Helper
+import terrain
 
 _shadow_cache = {}
 
@@ -67,6 +68,7 @@ class Planet(CelestialBody):
         self.trail = []
         self.max_trail_length = 400
         self.closest_star = None
+        self.surface = None
 
     def update(self, dt):
         super().update(dt)
@@ -79,9 +81,8 @@ class Planet(CelestialBody):
         # draw trail
         self.draw_trail(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
 
-        # draw planet
-        sx, sy, sr = super().draw(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
-
+        # nearest star: the light source (and what the flat shadow points away from)
+        self.closest_star = None
         min_dist = float('inf')
         for body in bodies:
             if isinstance(body, Star):
@@ -92,14 +93,24 @@ class Planet(CelestialBody):
                     min_dist = dist
                     self.closest_star = body
 
-        # draw shadow
+        sx = (self.position[0] - offset_x) * zoom + WIDTH // 2
+        sy = (self.position[1] - offset_y) * zoom + HEIGHT // 2
+        sr = max(1, int(self.radius * zoom))
+
+        # big enough on screen -> lit, rotating, textured sphere (see terrain.py)
+        if terrain.draw_planet(screen, self, sx, sy, sr, self.closest_star):
+            return
+
+        # otherwise the flat circle with the simple shadow, as before
+        sx, sy, sr = super().draw(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
+
         if self.closest_star:
             dx, dy = self.closest_star.position[0] - self.position[0], self.closest_star.position[1] - self.position[1]
             dist = max(math.sqrt(dx**2 + dy**2), 1)
             # Offset shadow in opposite direction of sun
             sh_x = sx - (dx / dist) * (sr * 0.8)
             sh_y = sy - (dy / dist) * (sr * 0.8)
-            
+
             screen.blit(_get_shadow(sr), (sh_x - sr, sh_y - sr))
 
 class BlackHole(CelestialBody):
@@ -110,12 +121,18 @@ class BlackHole(CelestialBody):
         self.event_horizon = radius * 3
         self.is_static = False
 
+        self.trail = []
+        self.max_trail_length = 400
+
     def update(self, dt):
         if not self.is_static:
             super().update(dt)
 
         self.radius = self.base_radius * self.mass / self.base_mass
         self.event_horizon = self.radius * 3
+        self.trail.append(self.position[:])
+        if len(self.trail) > self.max_trail_length:
+            self.trail.pop(0)
 
     def attract(self, bodies):
 
@@ -135,6 +152,8 @@ class BlackHole(CelestialBody):
         return removed_bodies
 
     def draw(self, screen, bodies, zoom, offset_x, offset_y, WIDTH, HEIGHT):
+        self.draw_trail(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
+
         screen_x = int((self.position[0] - offset_x) * zoom + WIDTH // 2)
         screen_y = int((self.position[1] - offset_y) * zoom + HEIGHT // 2)
 

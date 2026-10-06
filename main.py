@@ -9,6 +9,7 @@ import os
 import native_physics
 from menu import run_menu
 from starfield import ParallaxStars
+import terrain
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -352,6 +353,10 @@ while running:
             camera_y += (HEIGHT//2 - camera_y) 
 
     starfield.draw(screen, camera_x, camera_y, zoom)
+    
+    terrain.begin_frame()
+    for planet in planet_list[:]:
+        planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
 
     for planet in planet_list[:]:
         planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
@@ -377,6 +382,7 @@ while running:
         "Right-Click + Drag: Launch Body",
         f"Physics Engine: {'C++' if native_physics.available else 'Python'}",
         f"Camera [C]: {'Following' if follow_cam else 'Free (left-drag to pan)'}",
+        f"Terrain: {'C++' if terrain.available else 'off (flat planets)'}",
     ]
 
     for idx, line in enumerate(hud_lines):

@@ -1,6 +1,9 @@
 import pygame
 import math
 
+VISUAL_SPIN_SCALE = 0.12   
+MAX_VISUAL_SPIN = 3.0
+
 class CelestialBody:
     def __init__(self, name, mass, radius, color, position, immovable=False, spin_rate=20):
         self.name = name
@@ -14,6 +17,7 @@ class CelestialBody:
         self.age = 0
         self.angle = 0.0
         self.spin_rate = spin_rate
+        self.visual_angle = 0.0
 
     def apply_force(self, force):
         if self.immovable: return
@@ -23,6 +27,8 @@ class CelestialBody:
     def update(self, dt):
         self.age += dt
         self.angle = (self.angle + self.spin_rate * dt) % 360.0
+        step = max(-MAX_VISUAL_SPIN, min(MAX_VISUAL_SPIN, self.spin_rate * dt * VISUAL_SPIN_SCALE))
+        self.visual_angle = (self.visual_angle + step) % 360.0
 
     def draw(self, screen, zoom, offset_x, offset_y, WIDTH, HEIGHT):
         # basic position calculation for everything
