@@ -50,7 +50,7 @@ def _controls_screen(screen, clock, width, height):
             if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
                 return None
 
-        _draw_background(screen, stars)
+        _draw_background(screen)
         screen.blit(panel, (px, py))
 
         title = title_font.render("Controls", True, ACCENT)
@@ -111,7 +111,7 @@ def run_menu(screen, width, height, footer=""):
                     pygame.display.toggle_fullscreen()
 
         if chosen == "controls":
-            if _controls_screen(screen, clock, stars, width, height) == "quit":
+            if _controls_screen(screen, clock, width, height) == "quit":
                 return "quit"
         elif chosen:
             return chosen

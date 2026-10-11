@@ -358,9 +358,6 @@ while running:
     for planet in planet_list[:]:
         planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
 
-    for planet in planet_list[:]:
-        planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
-
     for particle in all_particles[:]:
         particle.draw(screen, zoom, camera_x, camera_y, WIDTH, HEIGHT) 
 

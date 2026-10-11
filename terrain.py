@@ -14,12 +14,13 @@ import zlib
 import pygame
 
 MIN_RADIUS_PX = 6          
-MAX_RADIUS_PX = 600      
-MAX_RENDER = 160          
-MAX_RENDERS_PER_FRAME = 6  
+MAX_RADIUS_PX = 600        
+MAX_RENDER = 384           
+MAX_TEXTURE = 512         
+MAX_PIXELS_PER_FRAME = 300_000  
 MAX_BAKES_PER_FRAME = 1    
-GAS_RADIUS = 18           
-LIGHT_Z = 0.0           
+GAS_RADIUS = 18            
+LIGHT_Z = 0.0          
 
 
 if getattr(sys, "frozen", False):      
@@ -57,14 +58,14 @@ _lib = _load()
 available = _lib is not None
 
 
-_renders = 0
+_pixels = 0
 _bakes = 0
 
 
 def begin_frame():
     """Call once per frame, before drawing the planets."""
-    global _renders, _bakes
-    _renders = 0
+    global _pixels, _bakes
+    _pixels = 0
     _bakes = 0
 
 
@@ -115,25 +116,22 @@ class PlanetSurface:
             self.freq, self.octaves = rnd.uniform(2.4, 3.8), 5
             self.atmo = 0.15
 
-        self.tsize = 256 if radius >= 12 else 128
         self.spin_mult = rnd.uniform(0.6, 1.6) * rnd.choice((1, 1, 1, -1))   # some spin backwards
+        self.tsize = 0
         self.rgba = None
 
-    def ready(self):
+    def ready(self, size):
         """True once the texture exists. Baking is limited to a few per frame."""
         global _bakes
-        if self.rgba is not None:
+        want = 128
+        while want < size and want < MAX_TEXTURE:
+            want *= 2
+        if self.tsize >= want:
             return True
-        if _bakes >= MAX_BAKES_PER_FRAME:
-            return False
-        _bakes += 1
-        flat = [v for pos, rgb in _palette(self.kind, self.color) for v in (pos, *rgb)]
-        stops = (ctypes.c_double * len(flat))(*flat)
-        rgba = (ctypes.c_uint8 * (self.tsize * self.tsize * 4))()
-        _lib.terrain_generate(self.seed, self.tsize, self.style, self.freq, self.octaves,
-                              stops, len(flat) // 4, rgba)
-        self.rgba = rgba
-        return True
+        if _bakes < MAX_BAKES_PER_FRAME:
+            _bakes += 1
+            self._bake(want)
+        return self.rgba is not None
 
     def sprite(self, size, spin_deg, light):
         out = (ctypes.c_uint8 * (size * size * 4))()
@@ -141,21 +139,34 @@ class PlanetSurface:
                             light[0], light[1], light[2], self.atmo, out)
         return pygame.image.frombuffer(bytes(out), (size, size), "RGBA").convert_alpha()
 
+    def _bake(self, size):
+        octaves = max(3, min(8, self.octaves + size.bit_length() - 9))
+        flat = [v for pos, rgb in _palette(self.kind, self.color) for v in (pos, *rgb)]
+        stops = (ctypes.c_double * len(flat))(*flat)
+        rgba = (ctypes.c_uint8 * (size * size * 4))()
+        _lib.terrain_generate(self.seed, size, self.style, self.freq, octaves,
+                              stops, len(flat) // 4, rgba)
+        self.rgba, self.tsize = rgba, size
 
 def draw_planet(screen, planet, sx, sy, sr, star):
     
-    global _renders
+    global _pixels
     if not available or sr < MIN_RADIUS_PX or sr > MAX_RADIUS_PX:
         return False
     if sx < -sr or sy < -sr or sx > screen.get_width() + sr or sy > screen.get_height() + sr:
         return True                                   
-    if _renders >= MAX_RENDERS_PER_FRAME:
+
+    diameter = sr * 2
+    size = min(MAX_RENDER, diameter)                      # exact size when it fits: no blur
+    while size > 48 and _pixels + size * size > MAX_PIXELS_PER_FRAME:
+        size = int(size * 0.75)                           # over budget: draw a smaller, blurrier one
+    if _pixels + size * size > MAX_PIXELS_PER_FRAME:
         return False
 
     surf = planet.surface
     if surf is None:
         surf = planet.surface = PlanetSurface(planet.name, planet.color, planet.radius)
-    if not surf.ready():
+    if not surf.ready(size):
         return False
 
     if star is not None:                                   # light comes from the nearest star
@@ -166,11 +177,9 @@ def draw_planet(screen, planet, sx, sy, sr, star):
     else:
         light = (0.0, 0.0, 1.0)                            # no star: light the whole face
 
-    diameter = sr * 2
-    render_size = min(MAX_RENDER, ((diameter + 15) // 16) * 16)   # few distinct sizes
-    img = surf.sprite(render_size, planet.visual_angle, light)
-    if render_size != diameter:
+    img = surf.sprite(size, planet.visual_angle, light)
+    if size != diameter:
         img = pygame.transform.smoothscale(img, (diameter, diameter))
     screen.blit(img, (int(sx) - sr, int(sy) - sr))
-    _renders += 1
+    _pixels += size * size
     return True
