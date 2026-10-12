@@ -3,6 +3,8 @@ import math
 
 VISUAL_SPIN_SCALE = 0.12   
 MAX_VISUAL_SPIN = 3.0
+VISUAL_TIME_SCALE = 0.2
+MAX_VISUAL_TIME = 0.04
 
 class CelestialBody:
     def __init__(self, name, mass, radius, color, position, immovable=False, spin_rate=20):
@@ -18,6 +20,7 @@ class CelestialBody:
         self.angle = 0.0
         self.spin_rate = spin_rate
         self.visual_angle = 0.0
+        self.visual_t = 0.0
 
     def apply_force(self, force):
         if self.immovable: return
@@ -29,6 +32,7 @@ class CelestialBody:
         self.angle = (self.angle + self.spin_rate * dt) % 360.0
         step = max(-MAX_VISUAL_SPIN, min(MAX_VISUAL_SPIN, self.spin_rate * dt * VISUAL_SPIN_SCALE))
         self.visual_angle = (self.visual_angle + step) % 360.0
+        self.visual_t += min(dt * VISUAL_TIME_SCALE, MAX_VISUAL_TIME)
 
     def draw(self, screen, zoom, offset_x, offset_y, WIDTH, HEIGHT):
         # basic position calculation for everything

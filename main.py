@@ -10,6 +10,7 @@ import native_physics
 from menu import run_menu
 from starfield import ParallaxStars
 import terrain
+import fx
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -355,8 +356,13 @@ while running:
     starfield.draw(screen, camera_x, camera_y, zoom)
     
     terrain.begin_frame()
+    fx.begin_frame()
     for planet in planet_list[:]:
-        planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
+        if not isinstance(planet, BlackHole):
+            planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
+    for planet in planet_list[:]:             
+        if isinstance(planet, BlackHole):
+            planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
 
     for particle in all_particles[:]:
         particle.draw(screen, zoom, camera_x, camera_y, WIDTH, HEIGHT) 
@@ -377,9 +383,10 @@ while running:
         f"Spawn Mass [[ / ]]: {spawn_mass}",
         f"Spawn Radius [- / =]: {spawn_radius}",
         "Right-Click + Drag: Launch Body",
-        f"Physics Engine: {'C++' if native_physics.available else 'Python'}",
         f"Camera [C]: {'Following' if follow_cam else 'Free (left-drag to pan)'}",
+        f"Physics Engine: {'C++' if native_physics.available else 'Python'}",
         f"Terrain: {'C++' if terrain.available else 'off (flat planets)'}",
+        f"Effects: {'C++' if fx.available else 'off (simple stars / black holes)'}",
     ]
 
     for idx, line in enumerate(hud_lines):

@@ -3,6 +3,7 @@ import pygame
 import math
 from helper import Helper
 import terrain
+import fx
 
 _shadow_cache = {}
 
@@ -48,17 +49,21 @@ class Star(CelestialBody):
         # draw color based on age
         self.color = star_color(self.age / self.lifetime)
 
+        self.draw_trail(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
+
         sx = int((self.position[0] - offset_x) * zoom + WIDTH // 2)
         sy = int((self.position[1] - offset_y) * zoom + HEIGHT // 2)
+
+        if fx.draw_star(screen, self, sx, sy, zoom):
+            return
+
+        # simple look: used when fx.dll is missing or the frame budget is used up
         glow_r = int(max(1, self.radius * zoom) * 2.2)
         if 6 <= glow_r <= 300:                       # skip when tiny or huge (zoomed way in)
             q = tuple((c // 16) * 16 for c in self.color)   # quantize so the glow cache isn't rebuilt every frame
             glow = Helper.create_glow_surface(glow_r, q, 110)
             screen.blit(glow, (sx - glow_r, sy - glow_r))
 
-        self.draw_trail(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
-
-        # draw star 
         super().draw(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
 
         
@@ -156,6 +161,12 @@ class BlackHole(CelestialBody):
 
         screen_x = int((self.position[0] - offset_x) * zoom + WIDTH // 2)
         screen_y = int((self.position[1] - offset_y) * zoom + HEIGHT // 2)
+
+        if fx.draw_black_hole(screen, self, screen_x, screen_y, zoom):
+            return
+
+        # simple look: used when fx.dll is missing or the frame budget is used up
+        core_radius = max(1, int(self.radius * zoom))
 
         core_radius = max(1, int(self.radius * zoom))
         horizon_radius = max(2, int(self.event_horizon * zoom))
