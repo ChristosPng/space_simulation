@@ -44,11 +44,39 @@ class CelestialBody:
         return screen_x, screen_y, scaled_radius
 
     def draw_trail(self, screen, zoom, offset_x, offset_y, WIDTH, HEIGHT, step=4, segs=4):
-        pts = [((p[0] - offset_x) * zoom + WIDTH // 2,
-                (p[1] - offset_y) * zoom + HEIGHT // 2) for p in self.trail[::step]]
-        n = len(pts)
+        if not hasattr(self, 'trail') or len(self.trail) < 2: 
+            return
+            
+        current_screen_x = (self.position[0] - offset_x) * zoom + WIDTH // 2
+        current_screen_y = (self.position[1] - offset_y) * zoom + HEIGHT // 2
+        scaled_radius = max(1, self.radius * zoom)
+
+        valid_pts = []
+        for p in self.trail:
+            px = (p[0] - offset_x) * zoom + WIDTH // 2
+            py = (p[1] - offset_y) * zoom + HEIGHT // 2
+            if math.hypot(px - current_screen_x, py - current_screen_y) > scaled_radius:
+                valid_pts.append((px, py))
+                
+        if not valid_pts:
+            return
+            
+        last_px, last_py = valid_pts[-1]
+        dx = current_screen_x - last_px
+        dy = current_screen_y - last_py
+        dist = math.hypot(dx, dy)
+        
+        if dist > 0:
+            edge_x = current_screen_x - (dx / dist) * scaled_radius
+            edge_y = current_screen_y - (dy / dist) * scaled_radius
+            valid_pts.append((edge_x, edge_y))
+
+        n = len(valid_pts)
+        if n < 2: 
+            return
+
         for s in range(segs):
-            seg = pts[s * n // segs : (s + 1) * n // segs + 1]
+            seg = valid_pts[s * n // segs : (s + 1) * n // segs + 1]
             if len(seg) > 1:
                 shade = int(255 * (s + 1) / segs)
                 pygame.draw.lines(screen, (shade, shade, shade), False, seg, 1)

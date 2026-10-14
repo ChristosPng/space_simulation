@@ -49,8 +49,6 @@ class Star(CelestialBody):
         # draw color based on age
         self.color = star_color(self.age / self.lifetime)
 
-        self.draw_trail(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
-
         sx = int((self.position[0] - offset_x) * zoom + WIDTH // 2)
         sy = int((self.position[1] - offset_y) * zoom + HEIGHT // 2)
 
@@ -83,8 +81,6 @@ class Planet(CelestialBody):
             self.trail.pop(0)
 
     def draw(self, screen, bodies, zoom, offset_x, offset_y, WIDTH, HEIGHT):
-        # draw trail
-        self.draw_trail(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
 
         # nearest star: the light source (and what the flat shadow points away from)
         self.closest_star = None
@@ -123,7 +119,7 @@ class BlackHole(CelestialBody):
         super().__init__(name, mass, radius, (0,0,0), position)
         self.base_radius = radius       
         self.base_mass = mass
-        self.event_horizon = radius * 3
+        self.event_horizon = radius * 1.1
         self.is_static = False
 
         self.trail = []
@@ -134,7 +130,7 @@ class BlackHole(CelestialBody):
             super().update(dt)
 
         self.radius = self.base_radius * self.mass / self.base_mass
-        self.event_horizon = self.radius * 3
+        self.event_horizon = self.radius * 1.1
         self.trail.append(self.position[:])
         if len(self.trail) > self.max_trail_length:
             self.trail.pop(0)
@@ -157,8 +153,7 @@ class BlackHole(CelestialBody):
         return removed_bodies
 
     def draw(self, screen, bodies, zoom, offset_x, offset_y, WIDTH, HEIGHT):
-        self.draw_trail(screen, zoom, offset_x, offset_y, WIDTH, HEIGHT)
-
+    
         screen_x = int((self.position[0] - offset_x) * zoom + WIDTH // 2)
         screen_y = int((self.position[1] - offset_y) * zoom + HEIGHT // 2)
 

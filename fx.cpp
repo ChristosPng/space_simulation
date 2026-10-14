@@ -156,14 +156,22 @@ EXPORT void fx_black_hole(const uint8_t* noise, int ts, int size, double span, d
 
     for (int py = 0; py < size; ++py) {
         for (int px = 0; px < size; ++px) {
-            float X = (px + 0.5f - c) * k, Y = (py + 0.5f - c) * k;       // in black-hole radii
+            float X = (px + 0.5f - c) * k, Y = (py + 0.5f - c) * k;       
             float th = std::sqrt(X * X + Y * Y);
             uint8_t* o0 = &out[4 * ((size_t)py * size + px)];
             
             if (th >= (float)span) { o0[0] = o0[1] = o0[2] = o0[3] = 0; continue; }
             Acc acc;
 
-            // ONLY draw the black shadow (Event Horizon)
+            float haze = 0.0f;
+            if (th >= 1.0f && th < 1.15f) {
+                haze = (1.0f - smoothstep(1.0f, 1.15f, th)) * 0.45f; 
+            }
+            if (haze > 0.001f) {
+                acc.over(100.0f, 130.0f, 180.0f, haze);
+            }
+
+
             float sh = 1.0f - smoothstep(0.99f, 1.01f, th);
             if (sh > 0) acc.over(0, 0, 0, sh);
 

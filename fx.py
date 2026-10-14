@@ -27,8 +27,8 @@ MAX_BH_SPRITE = 256
 MIN_BH_RADIUS_PX = 3       # smaller than this on screen -> the simple look
 
 LENS_ENABLED = True        # the spacetime warp of whatever is behind a black hole
-LENS_EINSTEIN = 2.1      # warp strength (in radii)
-LENS_REACH = 6.0          # the warp fades out this many radii from the hole
+LENS_EINSTEIN = 1.7        # warp strength (in radii)
+LENS_REACH = 6.0           # the warp fades out this many radii from the hole
 MAX_LENS_PX = 220          # biggest warp radius in pixels (bigger holes keep only the sprite)
 
 

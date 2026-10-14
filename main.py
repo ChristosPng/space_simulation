@@ -52,8 +52,11 @@ def handle_audio():
 pygame.init()
 
 info = pygame.display.Info()
-WIDTH = info.current_w
-HEIGHT = info.current_h
+MONITOR_W = info.current_w
+MONITOR_H = info.current_h
+WIDTH = MONITOR_W
+HEIGHT = MONITOR_H
+is_fullscreen = True
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 pygame.display.set_caption("Orbital System Simulation")
@@ -142,12 +145,20 @@ menu_btn = pygame.Rect(WIDTH - 160, 10, 150, 38)
 
 dragging = False
 follow_cam = True
+selected_body = None
 
 while running:
     back_to_menu = False
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        
+        if event.type == pygame.VIDEORESIZE:
+            if not is_fullscreen:
+                WIDTH, HEIGHT = event.w, event.h
+                screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+                menu_btn.x = WIDTH - 160
+                starfield = ParallaxStars(WIDTH, HEIGHT)
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
@@ -155,10 +166,20 @@ while running:
                 pause_sound.play()
 
             if event.key in (pygame.K_F11, pygame.K_f): #use "F11" or "f" key to toggle fullscreen
-                pygame.display.toggle_fullscreen() 
+                is_fullscreen = not is_fullscreen
+                if is_fullscreen:
+                    WIDTH, HEIGHT = MONITOR_W, MONITOR_H
+                    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+                else:
+                    WIDTH, HEIGHT = int(MONITOR_W * 0.8), int(MONITOR_H * 0.8)
+                    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+                
+                menu_btn.x = WIDTH - 160
+                starfield = ParallaxStars(WIDTH, HEIGHT) 
 
             if event.key == pygame.K_c:  #use "C" for camera to follow the system
                 follow_cam = True
+                selected_body = None
 
             if event.key == pygame.K_t:  #use "T" key to toggle spawn type
                 spawn_type_idx = (spawn_type_idx + 1) % len(spawn_types)
@@ -201,14 +222,33 @@ while running:
             if menu_btn.collidepoint(event.pos):
                 back_to_menu = True
             else:
-                dragging = True
+                mx, my = event.pos
+                world_x = (mx - WIDTH // 2) / zoom + camera_x
+                world_y = (my - HEIGHT // 2) / zoom + camera_y
+
+                clicked_body = None
+                for body in planet_list:
+                    dist = math.hypot(body.position[0] - world_x, body.position[1] - world_y)
+                    if dist <= max(body.radius, 15):
+                        clicked_body = body
+                        break
+
+                if clicked_body:
+                    selected_body = clicked_body
+                    follow_cam = True
+                    zoom = max(0.4, min(4.0, 4000 / (clicked_body.mass + 200)))
+                    dragging = False
+                else:
+                    dragging = True
+                    selected_body = None
         
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             dragging = False
 
         if event.type == pygame.MOUSEMOTION and dragging:
             if event.buttons[0]:
-                follow_cam = False                 
+                follow_cam = False   
+                selected_body = None              
                 camera_x -= event.rel[0] / zoom
                 camera_y -= event.rel[1] / zoom
             else:
@@ -342,16 +382,20 @@ while running:
     screen.fill((0, 0, 0))
 
     if follow_cam:
-        total_mass = sum(body.mass for body in planet_list)
-        if total_mass > 0:
-            target_x = sum(body.position[0] * body.mass for body in planet_list) / total_mass
-            target_y = sum(body.position[1] * body.mass for body in planet_list) / total_mass
-
-            camera_x += (target_x - camera_x) * 0.01
-            camera_y += (target_y - camera_y) * 0.01
+        if selected_body and selected_body in planet_list:
+            target_x = selected_body.position[0]
+            target_y = selected_body.position[1]
         else:
-            camera_x += (WIDTH//2 - camera_x)
-            camera_y += (HEIGHT//2 - camera_y) 
+            selected_body = None # clear if it was deleted
+            total_mass = sum(body.mass for body in planet_list)
+            if total_mass > 0:
+                target_x = sum(body.position[0] * body.mass for body in planet_list) / total_mass
+                target_y = sum(body.position[1] * body.mass for body in planet_list) / total_mass
+            else:
+                target_x, target_y = WIDTH//2, HEIGHT//2
+
+        camera_x += (target_x - camera_x) 
+        camera_y += (target_y - camera_y) 
 
     starfield.draw(screen, camera_x, camera_y, zoom)
     
@@ -360,13 +404,18 @@ while running:
     for planet in planet_list[:]:
         if not isinstance(planet, BlackHole):
             planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
+            
     for planet in planet_list[:]:             
         if isinstance(planet, BlackHole):
             planet.draw(screen, planet_list, zoom, camera_x, camera_y, WIDTH, HEIGHT)
 
+    for planet in planet_list[:]:
+        planet.draw_trail(screen, zoom, camera_x, camera_y, WIDTH, HEIGHT)
+
+
     for particle in all_particles[:]:
         particle.draw(screen, zoom, camera_x, camera_y, WIDTH, HEIGHT) 
-
+    
 
     dt_text = font.render(f"Time Step: {dt:.1f}", True, (255, 255, 255))
     screen.blit(dt_text, (10, 10))
@@ -383,10 +432,10 @@ while running:
         f"Spawn Mass [[ / ]]: {spawn_mass}",
         f"Spawn Radius [- / =]: {spawn_radius}",
         "Right-Click + Drag: Launch Body",
-        f"Camera [C]: {'Following' if follow_cam else 'Free (left-drag to pan)'}",
         f"Physics Engine: {'C++' if native_physics.available else 'Python'}",
         f"Terrain: {'C++' if terrain.available else 'off (flat planets)'}",
         f"Effects: {'C++' if fx.available else 'off (simple stars / black holes)'}",
+        f"Camera [C]: {'Locked to ' + selected_body.name if selected_body else 'Following System' if follow_cam else 'Free (left-drag)'}",
     ]
 
     for idx, line in enumerate(hud_lines):
