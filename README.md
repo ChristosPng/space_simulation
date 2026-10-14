@@ -75,6 +75,7 @@ Before running or compiling the simulation, ensure your system meets the followi
 | **Mouse Wheel** | Zoom in / Zoom out |
 | **F11 / F** | Toggle Fullscreen mode |
 | **Left Mouse Button and drag**| For free moving camera |
+| **Left Click on Body** | For locking camera to that specific body |
 | **C** | Camera Lock |
 
 ---
