@@ -72,6 +72,7 @@ Before running or compiling the simulation, ensure your system meets the followi
 | **`-` / `=`** | Decrease / Increase spawn body radius |
 | **Spacebar** | Pause / Resume physics simulation |
 | **Up / Down Arrows** | Increase / Decrease time step ($\Delta t$) |
+| **Left / Right Arrows** | Rewind Time |
 | **Mouse Wheel** | Zoom in / Zoom out |
 | **F11 / F** | Toggle Fullscreen mode |
 | **Left Mouse Button and drag**| For free moving camera |

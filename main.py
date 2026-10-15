@@ -11,6 +11,7 @@ from menu import run_menu
 from starfield import ParallaxStars
 import terrain
 import fx
+from timeline import TimelineManager
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -122,7 +123,7 @@ down_sound_played = False
 all_particles = []
 
 dt = 0.1
-STEP = 0.5
+STEP = 0.1
 
 #code for gui planet arrangement
 spawning = False
@@ -146,6 +147,9 @@ menu_btn = pygame.Rect(WIDTH - 160, 10, 150, 38)
 dragging = False
 follow_cam = True
 selected_body = None
+
+timeline = TimelineManager(max_history=600)
+timeline.reset(planet_list, all_particles)
 
 while running:
     back_to_menu = False
@@ -317,40 +321,65 @@ while running:
     else:
         down_sound_played = False
 
+    if keys[pygame.K_LEFT]:
+        if not paused:
+            paused = True
+        old_sel_name = selected_body.name if selected_body else None
+        p_list, p_parts = timeline.step_backward(4)
+        if p_list is not None:
+            planet_list, all_particles = p_list, p_parts
+            if old_sel_name:
+                selected_body = next((b for b in planet_list if b.name == old_sel_name), None)
+
+    elif keys[pygame.K_RIGHT]:
+        if not paused:
+            paused = True
+        old_sel_name = selected_body.name if selected_body else None
+        p_list, p_parts = timeline.step_forward(4)
+        if p_list is not None:
+            planet_list, all_particles = p_list, p_parts
+            if old_sel_name:
+                selected_body = next((b for b in planet_list if b.name == old_sel_name), None)
         
     if not paused:
 
         n = max(1, math.ceil(dt / STEP))
-        if not native_physics.step(planet_list, dt, n):
-            for _ in range(n):
-                Helper.rk4_step(planet_list, dt / n)      
+        micro_dt = dt / n
+        for _ in range(n):
+            if not native_physics.step(planet_list, micro_dt, 1):
+                Helper.rk4_step(planet_list, micro_dt)      
 
-        collision_pairs = []
-        for i in range(len(planet_list)):
-            for j in range(i + 1, len(planet_list)):
-                body1 = planet_list[i]
-                body2 = planet_list[j]
-                if Helper.check_collision(body1, body2):
-                    collision_pairs.append((body1, body2))
-                        
+            collision_pairs = []
+            for i in range(len(planet_list)):
+                for j in range(i + 1, len(planet_list)):
+                    body1 = planet_list[i]
+                    body2 = planet_list[j]
+                    if Helper.check_collision(body1, body2):
+                        collision_pairs.append((body1, body2))
+                            
 
-        merged = set()
-        for body1, body2 in collision_pairs:
-            if body1 in merged or body2 in merged:
-                continue
-            merged.add(body1)
-            merged.add(body2)
-            impact_sound.play()
+            merged = set()
+            for body1, body2 in collision_pairs:
+                if body1 in merged or body2 in merged:
+                    continue
+                merged.add(body1)
+                merged.add(body2)
+                impact_sound.play()
 
-            impact_x = (body1.position[0] + body2.position[0]) / 2
-            impact_y = (body1.position[1] + body2.position[1]) / 2
+                impact_x = (body1.position[0] + body2.position[0]) / 2
+                impact_y = (body1.position[1] + body2.position[1]) / 2
 
-            for _ in range(100):
-                p_color = [(c1 + c2) // 2 for c1, c2 in zip(body1.color, body2.color)]
-                all_particles.append(Particle(impact_x, impact_y, p_color))
+                for _ in range(100):
+                    p_color = [(c1 + c2) // 2 for c1, c2 in zip(body1.color, body2.color)]
+                    all_particles.append(Particle(impact_x, impact_y, p_color))
 
+                before = set(planet_list)
+                planet_list = Helper.resolve_inelastic_collision(body1, body2, planet_list)
 
-            planet_list = Helper.resolve_inelastic_collision(body1, body2, planet_list)
+                if selected_body is body1 or selected_body is body2:
+                    new_ones = [b for b in planet_list if b not in before]
+                    if new_ones:
+                        selected_body = new_ones[0]
 
         total_m = sum(b.mass for b in planet_list)
         if total_m > 0:
@@ -372,12 +401,16 @@ while running:
                 for r in removed:
                     if r in planet_list:
                         planet_list.remove(r)
+                    if r is selected_body:
+                        selected_body = body
 
 
         for particle in all_particles[:]:
             particle.update()
             if particle.life <= 0:
                 all_particles.remove(particle)
+
+        timeline.record(planet_list, all_particles)
 
     screen.fill((0, 0, 0))
 
@@ -449,9 +482,7 @@ while running:
     screen.blit(label, label.get_rect(center=menu_btn.center))
 
     if paused:
-        pause = font.render("PAUSED - Press SPACE to Resume", True, (255, 100, 0))
-        pygame.draw.rect(screen, (255, 255, 255), (WIDTH // 2 - pause.get_width() // 2 - 10, HEIGHT // 8 - 10, pause.get_width() + 20, pause.get_height() + 20))
-        screen.blit(pause, (WIDTH // 2 - pause.get_width() // 2, HEIGHT // 8 ))
+        timeline.draw_ui(screen, font, WIDTH)
 
     pygame.display.flip()
     clock.tick(60)
